@@ -1,4 +1,5 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
+import type { Role } from "@/lib/auth";
+import { layersForRole } from "@/lib/layers-mock";
 
 export interface LayerFeature extends GeoJSON.Feature {
   properties: { id: number; name: string };
@@ -10,13 +11,22 @@ export interface LayerCollection extends GeoJSON.FeatureCollection {
 
 export class UnauthorizedError extends Error {}
 
-// token is null for an anonymous visitor — the API resolves a request with
-// no Authorization header to its public role rather than rejecting it.
+function roleFromToken(token: string | null): Role | null {
+  if (!token) return null;
+  try {
+    const payload = token.split(".")[1];
+    const json = atob(payload.replace(/-/g, "+").replace(/_/g, "/"));
+    const claims = JSON.parse(json) as { role_name: Role };
+    return claims.role_name;
+  } catch {
+    return null;
+  }
+}
+
+// Static demo build: no backend to call, so this resolves from the mock
+// layer set instead of an HTTP request. token is null for an anonymous
+// visitor — mirroring the real API, that resolves to the public role rather
+// than being rejected.
 export async function fetchLayers(token: string | null): Promise<LayerCollection> {
-  const res = await fetch(`${API_URL}/api/layers`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
-  });
-  if (res.status === 401) throw new UnauthorizedError();
-  if (!res.ok) throw new Error("failed to load layers");
-  return res.json();
+  return layersForRole(roleFromToken(token));
 }

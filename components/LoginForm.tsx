@@ -12,8 +12,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { setToken } from "@/lib/auth";
+import { mockLogin } from "@/lib/layers-mock";
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8080";
 const SUPPORT_EMAIL = "indasu.systems@gmail.com";
 
 export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
@@ -35,27 +35,15 @@ export function LoginForm({ onSuccess }: { onSuccess: () => void }) {
     }
 
     setSubmitting(true);
-    try {
-      const res = await fetch(`${API_URL}/api/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          username: trimmedUsername,
-          password: trimmedPassword,
-        }),
-      });
-      if (!res.ok) {
-        setError("Invalid username or password.");
-        return;
-      }
-      const data: { token: string } = await res.json();
-      setToken(data.token);
-      onSuccess();
-    } catch {
-      setError("Could not reach the server. Is the API running?");
-    } finally {
+    const token = mockLogin(trimmedUsername, trimmedPassword);
+    if (!token) {
+      setError("Invalid username or password.");
       setSubmitting(false);
+      return;
     }
+    setToken(token);
+    onSuccess();
+    setSubmitting(false);
   }
 
   return (
