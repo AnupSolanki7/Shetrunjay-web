@@ -1,12 +1,21 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { Map as MapLibreMap, type FilterSpecification, type GeoJSONSource, type IControl } from "maplibre-gl";
+import {
+  Map as MapLibreMap,
+  Popup,
+  type FilterSpecification,
+  type GeoJSONSource,
+  type IControl,
+  type ImageSource,
+  type MapGeoJSONFeature,
+} from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { boundsOfFeature } from "@/lib/geo";
 import { layerColor } from "@/lib/layer-style";
 import { MapControls } from "@/components/MapControls";
 import type { LayerFeature, LayerCollection } from "@/lib/layers-api";
+import type { RasterExtent } from "@/lib/gis-registry";
 
 const POLYGON_TYPES = new Set(["Polygon", "MultiPolygon"]);
 const LINE_TYPES = new Set(["LineString", "MultiLineString"]);
@@ -21,6 +30,31 @@ export interface ThemeOverlay {
   geometry: GeoJSON.Geometry;
   color: string;
   visible: boolean;
+}
+
+// A raster registry layer the user has toggled on, resolved to whichever
+// year's asset is currently selected (lib/gis-registry.ts's rasterYears /
+// rasterAsset).
+export interface ActiveRasterLayer {
+  id: string;
+  url: string;
+  extent: RasterExtent;
+  opacity: number;
+}
+
+function rasterSourceId(id: string): string {
+  return `raster-${id}`;
+}
+
+// MapLibre image sources take corners clockwise from the top-left.
+function cornersFromExtent(extent: RasterExtent): [[number, number], [number, number], [number, number], [number, number]] {
+  const { west, south, east, north } = extent;
+  return [
+    [west, north],
+    [east, north],
+    [east, south],
+    [west, south],
+  ];
 }
 
 const ATTRIBUTION_LIGHT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
@@ -128,6 +162,19 @@ function applyBasemapTheme(map: MapLibreMap, dark: boolean, attribution: Compact
   attribution.setHTML(dark ? ATTRIBUTION_DARK : ATTRIBUTION_LIGHT);
 }
 
+// MapLibre's GeoJSON source pipeline only carries scalar property values
+// through to click/query results — nested objects don't survive it — so
+// attrs (a Record) gets flattened to individual attr_<field> scalars here,
+// just for what the map source needs. The React-facing LayerFeature.attrs
+// shape (used by panels, not the map) stays a plain object.
+function flattenAttrs(attrs: Record<string, string | number | null>): Record<string, string | number> {
+  const flat: Record<string, string | number> = {};
+  for (const [key, value] of Object.entries(attrs)) {
+    if (value !== null) flat[`attr_${key}`] = value;
+  }
+  return flat;
+}
+
 function byGeometryType(
   data: LayerCollection,
   types: Set<string>,
@@ -140,9 +187,100 @@ function byGeometryType(
       // no layer name/id branch in the paint expression itself.
       .map((f) => ({
         ...f,
-        properties: { ...f.properties, color: layerColor(f.properties.id) },
+        properties: {
+          id: f.properties.id,
+          name: f.properties.name,
+          color: layerColor(f.properties.id),
+          ...flattenAttrs(f.properties.attrs),
+        },
       })),
   };
+}
+
+function escapeHtml(value: string): string {
+  return value.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
+}
+
+// Click popup: layer name plus whatever attribute fields the registry
+// declared for that layer (lib/gis-registry.ts's attributeFields), read back
+// off the attr_<field> scalars byGeometryType() flattened onto the source.
+function attachPopups(map: MapLibreMap) {
+  const layerIds = ["polygons-fill", "lines", "points"];
+  const popup = new Popup({ closeButton: true, closeOnClick: true, maxWidth: "260px" });
+
+  map.on("click", layerIds, (e) => {
+    const feature = e.features?.[0] as MapGeoJSONFeature | undefined;
+    if (!feature) return;
+    const props = (feature.properties ?? {}) as Record<string, string | number>;
+
+    const rows = Object.entries(props)
+      .filter(([key]) => key.startsWith("attr_"))
+      .map(
+        ([key, value]) =>
+          `<div class="flex justify-between gap-3"><span class="opacity-60">${escapeHtml(key.slice(5))}</span><span>${escapeHtml(String(value))}</span></div>`,
+      )
+      .join("");
+
+    const name = typeof props.name === "string" ? escapeHtml(props.name) : "";
+    const html = `<div class="text-sm font-medium">${name}</div>${
+      rows ? `<div class="mt-1 flex flex-col gap-0.5 text-xs">${rows}</div>` : ""
+    }`;
+
+    popup.setLngLat(e.lngLat).setHTML(html).addTo(map);
+  });
+
+  for (const id of layerIds) {
+    map.on("mouseenter", id, () => {
+      map.getCanvas().style.cursor = "pointer";
+    });
+    map.on("mouseleave", id, () => {
+      map.getCanvas().style.cursor = "";
+    });
+  }
+}
+
+// Raster theme overlays (LULC, Green Cover, Vegetation Change, drone
+// products, ...) — one MapLibre image source + raster layer per active
+// layer, inserted above the polygon fills (Catchments' many nested/
+// overlapping sub-basins stack their 0.25 opacity to near-opaque and would
+// otherwise hide any raster underneath) but below the line/point layers, so
+// roads/streams/boundaries stay legible as a reference on top of the
+// imagery. `applied` tracks what's already on the map (keyed by registry
+// id) so an unrelated re-render doesn't reload every image — only a
+// genuinely new url/extent does.
+function syncRasterLayers(
+  map: MapLibreMap,
+  active: ActiveRasterLayer[],
+  applied: Map<string, { url: string; extent: RasterExtent }>,
+) {
+  const activeIds = new Set(active.map((r) => r.id));
+
+  for (const id of applied.keys()) {
+    if (activeIds.has(id)) continue;
+    const sourceId = rasterSourceId(id);
+    if (map.getLayer(sourceId)) map.removeLayer(sourceId);
+    if (map.getSource(sourceId)) map.removeSource(sourceId);
+    applied.delete(id);
+  }
+
+  for (const layer of active) {
+    const sourceId = rasterSourceId(layer.id);
+    const prev = applied.get(layer.id);
+    const coordinates = cornersFromExtent(layer.extent);
+
+    if (!prev) {
+      map.addSource(sourceId, { type: "image", url: layer.url, coordinates });
+      map.addLayer(
+        { id: sourceId, type: "raster", source: sourceId, paint: { "raster-opacity": layer.opacity } },
+        map.getLayer("lines-casing") ? "lines-casing" : undefined,
+      );
+    } else if (prev.url !== layer.url || JSON.stringify(prev.extent) !== JSON.stringify(layer.extent)) {
+      const source = map.getSource<ImageSource>(sourceId);
+      source?.updateImage({ url: layer.url, coordinates });
+    }
+    if (map.getLayer(sourceId)) map.setPaintProperty(sourceId, "raster-opacity", layer.opacity);
+    applied.set(layer.id, { url: layer.url, extent: layer.extent });
+  }
 }
 
 function addLayers(
@@ -249,21 +387,30 @@ export default function Map({
   onReady,
   onToggleLayers,
   themeOverlay,
+  rasterLayers,
 }: {
   data: LayerCollection;
   visibility: Record<number, boolean>;
   onReady?: (map: MapLibreMap) => void;
   onToggleLayers?: () => void;
   themeOverlay?: ThemeOverlay | null;
+  rasterLayers?: ActiveRasterLayer[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const dataRef = useRef(data);
   const fitOnceRef = useRef({ done: false });
+  const rasterLayersRef = useRef(rasterLayers);
+  // globalThis.Map, not the local Map component this function is itself named after.
+  const appliedRasterRef = useRef(new globalThis.Map<string, { url: string; extent: RasterExtent }>());
 
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
+
+  useEffect(() => {
+    rasterLayersRef.current = rasterLayers;
+  }, [rasterLayers]);
 
   // map lifecycle: create once, tear down on unmount
   useEffect(() => {
@@ -283,6 +430,8 @@ export default function Map({
 
     map.on("load", () => {
       render(map, dataRef.current, fitOnceRef.current);
+      attachPopups(map);
+      syncRasterLayers(map, rasterLayersRef.current ?? [], appliedRasterRef.current);
       onReady?.(map);
     });
 
@@ -328,6 +477,14 @@ export default function Map({
       map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
     }
   }, [themeOverlay]);
+
+  // raster overlays: add/remove/swap image sources as layers are toggled or
+  // their selected year changes, without touching the vector sources.
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !map.isStyleLoaded()) return;
+    syncRasterLayers(map, rasterLayers ?? [], appliedRasterRef.current);
+  }, [rasterLayers]);
 
   // visibility toggles: filter, never re-fetch or refit
   useEffect(() => {

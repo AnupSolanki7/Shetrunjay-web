@@ -40,3 +40,8 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# raw GIS source data (see scripts/prepare-gis-data.mjs) — generated output
+# lives in public/gis/ and is committed instead
+/Vector/
+/Raster/

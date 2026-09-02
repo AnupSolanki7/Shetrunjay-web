@@ -1,0 +1,215 @@
+{
+  "generatedFrom": "C:\\Users\\anups\\Desktop\\shetrunjay hills\\Shetrunjay-web\\Vector",
+  "generatedFromRaster": "C:\\Users\\anups\\Desktop\\shetrunjay hills\\Shetrunjay-web\\Raster",
+  "layers": {
+    "forest-boundary": {
+      "path": "gis/vector/forest-boundary.geojson",
+      "bytes": 11595,
+      "featureCount": 3
+    },
+    "survey-number": {
+      "path": "gis/vector/survey-number.geojson",
+      "bytes": 1201904,
+      "featureCount": 2493
+    },
+    "streams": {
+      "path": "gis/vector/streams.geojson",
+      "bytes": 1498300,
+      "featureCount": 1841
+    },
+    "catchments": {
+      "path": "gis/vector/catchments.geojson",
+      "bytes": 763683,
+      "featureCount": 109
+    },
+    "district": {
+      "path": "gis/vector/district.geojson",
+      "bytes": 4695099,
+      "featureCount": 34
+    },
+    "taluka": {
+      "path": "gis/vector/taluka.geojson",
+      "bytes": 447694,
+      "featureCount": 10
+    },
+    "village": {
+      "path": "gis/vector/village.geojson",
+      "bytes": 68616,
+      "featureCount": 14
+    },
+    "roads": {
+      "path": "gis/vector/roads.geojson",
+      "bytes": 25372,
+      "featureCount": 23
+    },
+    "rivers": {
+      "path": "gis/vector/rivers.geojson",
+      "bytes": 118055,
+      "featureCount": 136
+    },
+    "grids": {
+      "path": "gis/vector/grids.geojson",
+      "bytes": 101432,
+      "featureCount": 189
+    },
+    "zones": {
+      "path": "gis/vector/zones.geojson",
+      "bytes": 109659,
+      "featureCount": 189
+    },
+    "tracks": {
+      "path": "gis/vector/tracks.geojson",
+      "bytes": 22411,
+      "featureCount": 24
+    },
+    "steps": {
+      "path": "gis/vector/steps.geojson",
+      "bytes": 18647,
+      "featureCount": 7
+    },
+    "smc-vantalavadi": {
+      "path": "gis/vector/smc-vantalavadi.geojson",
+      "bytes": 15046,
+      "featureCount": 27
+    },
+    "smc-matipala": {
+      "path": "gis/vector/smc-matipala.geojson",
+      "bytes": 7804,
+      "featureCount": 36
+    },
+    "smc-checkdam": {
+      "path": "gis/vector/smc-checkdam.geojson",
+      "bytes": 16626,
+      "featureCount": 79
+    },
+    "smc-causeway": {
+      "path": "gis/vector/smc-causeway.geojson",
+      "bytes": 12628,
+      "featureCount": 72
+    },
+    "study-area": {
+      "path": "gis/vector/study-area.geojson",
+      "bytes": 21421,
+      "featureCount": 1
+    }
+  },
+  "rasters": {
+    "forest-cover/1980": {
+      "bytes": 83118
+    },
+    "forest-cover/1989": {
+      "bytes": 128219
+    },
+    "forest-cover/1998": {
+      "bytes": 205693
+    },
+    "forest-cover/2008": {
+      "bytes": 154846
+    },
+    "forest-cover/2018": {
+      "bytes": 207309
+    },
+    "forest-cover/2025": {
+      "bytes": 103907
+    },
+    "forest-cover/2026": {
+      "bytes": 133157
+    },
+    "lulc/1980": {
+      "bytes": 104754
+    },
+    "lulc/1989": {
+      "bytes": 175504
+    },
+    "lulc/1998": {
+      "bytes": 245762
+    },
+    "lulc/2008": {
+      "bytes": 217257
+    },
+    "lulc/2018": {
+      "bytes": 269924
+    },
+    "lulc/2025": {
+      "bytes": 195556
+    },
+    "lulc/2026": {
+      "bytes": 234191
+    },
+    "fragmentation/1980": {
+      "bytes": 109950
+    },
+    "fragmentation/1989": {
+      "bytes": 125465
+    },
+    "fragmentation/1998": {
+      "bytes": 204212
+    },
+    "fragmentation/2008": {
+      "bytes": 177314
+    },
+    "fragmentation/2018": {
+      "bytes": 220821
+    },
+    "fragmentation/2025": {
+      "bytes": 125436
+    },
+    "fragmentation/2026": {
+      "bytes": 153818
+    },
+    "fcc/1980": {
+      "bytes": 1651300
+    },
+    "fcc/1989": {
+      "bytes": 2174712
+    },
+    "fcc/1998": {
+      "bytes": 2313464
+    },
+    "fcc/2008": {
+      "bytes": 2289020
+    },
+    "fcc/2018": {
+      "bytes": 2244428
+    },
+    "fcc/2025": {
+      "bytes": 2193941
+    },
+    "fcc/2026": {
+      "bytes": 2290731
+    },
+    "vegetation-change/1989": {
+      "bytes": 225089
+    },
+    "vegetation-change/1998": {
+      "bytes": 236877
+    },
+    "vegetation-change/2008": {
+      "bytes": 288989
+    },
+    "vegetation-change/2018": {
+      "bytes": 227503
+    },
+    "vegetation-change/2025": {
+      "bytes": 283873
+    },
+    "vegetation-change/2026": {
+      "bytes": 267406
+    },
+    "ortho": {
+      "bytes": 3683151
+    },
+    "dtm": {
+      "bytes": 2418835
+    },
+    "chm": {
+      "bytes": 3206652
+    },
+    "slope": {
+      "bytes": 3608076
+    },
+    "aspect": {
+      "bytes": 3312252
+    }
+  }
+}
