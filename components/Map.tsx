@@ -58,7 +58,11 @@ function cornersFromExtent(extent: RasterExtent): [[number, number], [number, nu
 }
 
 const ATTRIBUTION_LIGHT = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
-const ATTRIBUTION_DARK = `${ATTRIBUTION_LIGHT} &copy; <a href="https://carto.com/attributions">CARTO</a>`;
+// CARTO's free dark_all tiles now watermark "API KEY REQUIRED" on
+// production traffic (still HTTP 200 — the watermark is baked into the
+// pixels), so the dark basemap uses Esri's World Dark Gray Canvas instead —
+// no signup, no key, same "real dark style" property.
+const ATTRIBUTION_DARK = `${ATTRIBUTION_LIGHT} &copy; Esri, HERE, Garmin`;
 
 function isDark(): boolean {
   return document.documentElement.classList.contains("dark");
@@ -124,9 +128,21 @@ function mapStyle() {
       },
       "basemap-dark": {
         type: "raster" as const,
-        tiles: ["https://basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png"],
+        tiles: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}",
+        ],
         tileSize: 256,
         attribution: ATTRIBUTION_DARK,
+      },
+      // Esri splits the dark canvas into a base layer and a separate labels
+      // layer — the CARTO tiles this replaces had labels baked in, so this
+      // is drawn on top of basemap-dark to match.
+      "basemap-dark-labels": {
+        type: "raster" as const,
+        tiles: [
+          "https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}",
+        ],
+        tileSize: 256,
       },
     },
     layers: [
@@ -147,6 +163,12 @@ function mapStyle() {
         source: "basemap-dark",
         layout: { visibility: (dark ? "visible" : "none") as "none" | "visible" },
       },
+      {
+        id: "basemap-dark-labels",
+        type: "raster" as const,
+        source: "basemap-dark-labels",
+        layout: { visibility: (dark ? "visible" : "none") as "none" | "visible" },
+      },
     ],
   };
 }
@@ -156,6 +178,7 @@ function applyBasemapTheme(map: MapLibreMap, dark: boolean, attribution: Compact
   map.setPaintProperty("background", "background-color", bg);
   map.setLayoutProperty("basemap-light", "visibility", dark ? "none" : "visible");
   map.setLayoutProperty("basemap-dark", "visibility", dark ? "visible" : "none");
+  map.setLayoutProperty("basemap-dark-labels", "visibility", dark ? "visible" : "none");
   if (map.getLayer("lines-casing")) {
     map.setPaintProperty("lines-casing", "line-color", bg);
   }
