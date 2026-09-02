@@ -19,12 +19,13 @@ import { LayerPanel } from "@/components/LayerPanel";
 import { LegendCard } from "@/components/LegendCard";
 import { ThemeFilterPanel } from "@/components/ThemeFilterPanel";
 import { ForestCoverPanel } from "@/components/ForestCoverPanel";
-import { getToken } from "@/lib/auth";
+import { getToken, type Role } from "@/lib/auth";
 import { useAuthState } from "@/hooks/use-auth-state";
 import { fetchLayers, UnauthorizedError, type LayerCollection } from "@/lib/layers-api";
+import { registryForRole } from "@/lib/gis-registry";
 import { getYearColor, type ForestCoverYear, type ForestCoverSource } from "@/lib/forest-cover-mock";
 import { cn } from "@/lib/utils";
-import type { ThemeOverlay } from "@/components/Map";
+import type { ThemeOverlay, ActiveRasterLayer } from "@/components/Map";
 
 const Map = dynamic(() => import("@/components/Map"), { ssr: false });
 
@@ -38,6 +39,7 @@ export function MapDashboard() {
   const [error, setError] = useState(false);
   const [retryTick, setRetryTick] = useState(0);
   const [visibility, setVisibility] = useState<Record<number, boolean>>({});
+  const [rasterYear, setRasterYear] = useState<Record<string, number>>({});
   const [mobileSheet, setMobileSheet] = useState<MobileSheet>(null);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
 
@@ -48,6 +50,10 @@ export function MapDashboard() {
 
   const token = getToken();
   const loading = layers === null && !error;
+  // Unsigned demo token, decoded client-side only — same trust model as
+  // lib/layers-api.ts's own roleFromToken().
+  const role = (auth.user?.role as Role | undefined) ?? null;
+  const registryLayers = registryForRole(role);
 
   // Refetch whenever the token or retry count changes — with no token the
   // API resolves the request to its public role rather than rejecting it,
@@ -73,17 +79,49 @@ export function MapDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, retryTick]);
 
-  function toggleVisibility(id: number) {
-    setVisibility((v) => ({ ...v, [id]: !(v[id] ?? true) }));
+  function toggleVisibility(id: number, currentlyVisible: boolean) {
+    setVisibility((v) => ({ ...v, [id]: !currentlyVisible }));
+  }
+
+  function changeRasterYear(id: string, year: number) {
+    setRasterYear((y) => ({ ...y, [id]: year }));
   }
 
   const visibleLayers = (layers ?? EMPTY).features;
+
+  // Raster overlays: every available raster layer the role can see and that
+  // isn't toggled off, resolved to its currently-selected year's asset (or
+  // its one snapshot, for single-image themes like Ortho/CHM/Slope/Aspect).
+  const visibleRasterEntries = registryLayers
+    .filter((entry) => entry.status === "available" && entry.kind === "raster")
+    .filter((entry) => visibility[entry.numericId] ?? false);
+
+  const activeRasterLayers: ActiveRasterLayer[] = visibleRasterEntries.flatMap((entry): ActiveRasterLayer[] => {
+    const opacity = entry.isPhotographic ? 1 : 0.9;
+    if (entry.rasterAsset) {
+      return [{ id: entry.id, url: `/${entry.rasterAsset.path}`, extent: entry.rasterAsset.extent, opacity }];
+    }
+    if (entry.rasterYears) {
+      const years = Object.keys(entry.rasterYears).map(Number).sort((a, b) => a - b);
+      const year = rasterYear[entry.id] ?? years[years.length - 1];
+      const asset = entry.rasterYears[year];
+      if (!asset) return [];
+      return [{ id: entry.id, url: `/${asset.path}`, extent: asset.extent, opacity }];
+    }
+    return [];
+  });
+
+  const legendRasterLayers = visibleRasterEntries.map((entry) => ({
+    id: entry.id,
+    name: entry.name,
+    isPhotographic: entry.isPhotographic,
+  }));
 
   // Forest Cover (FRD §1.1): the "satellite/drone layer" is a placeholder
   // tint over the real hill boundary geometry, standing in for imagery that
   // doesn't exist yet — swapped per year so the map visibly responds to the
   // year filter.
-  const boundaryFeature = visibleLayers.find((f) => f.properties.name === "shatrunjay_hill_boundary");
+  const boundaryFeature = visibleLayers.find((f) => f.properties.layerId === "study-area");
   const themeOverlay: ThemeOverlay | null =
     selectedTheme === "forest_cover" && boundaryFeature && forestCoverYear
       ? {
@@ -108,6 +146,7 @@ export function MapDashboard() {
           visibility={visibility}
           onToggleLayers={() => setMobileSheet((s) => (s === "layers" ? null : "layers"))}
           themeOverlay={themeOverlay}
+          rasterLayers={activeRasterLayers}
         />
 
         {sidebarCollapsed ? (
@@ -141,11 +180,13 @@ export function MapDashboard() {
               bare
             />
             <LayerPanel
-              layers={layers?.features ?? null}
+              layers={registryLayers}
               loading={loading}
               error={error}
               visibility={visibility}
               onToggle={toggleVisibility}
+              rasterYear={rasterYear}
+              onRasterYearChange={changeRasterYear}
               onRetry={() => setRetryTick((t) => t + 1)}
               bare
             />
@@ -166,6 +207,7 @@ export function MapDashboard() {
 
         <LegendCard
           layers={visibleLayers}
+          rasterLayers={legendRasterLayers}
           className="absolute right-4 bottom-4 hidden w-64 xl:flex"
         />
       </div>
@@ -249,11 +291,13 @@ export function MapDashboard() {
         <SheetContent side="bottom" className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto scrollbar-thin">
           <SheetTitle className="sr-only">Layers</SheetTitle>
           <LayerPanel
-            layers={layers?.features ?? null}
+            layers={registryLayers}
             loading={loading}
             error={error}
             visibility={visibility}
             onToggle={toggleVisibility}
+            rasterYear={rasterYear}
+            onRasterYearChange={changeRasterYear}
             onRetry={() => setRetryTick((t) => t + 1)}
           />
         </SheetContent>
@@ -262,7 +306,7 @@ export function MapDashboard() {
       <Sheet open={mobileSheet === "legend"} onOpenChange={(o) => setMobileSheet(o ? "legend" : null)}>
         <SheetContent side="bottom" className="max-h-[70vh] overflow-y-auto scrollbar-thin">
           <SheetTitle className="sr-only">Legend</SheetTitle>
-          <LegendCard layers={visibleLayers} className="flex" />
+          <LegendCard layers={visibleLayers} rasterLayers={legendRasterLayers} className="flex" />
         </SheetContent>
       </Sheet>
 

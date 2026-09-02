@@ -2,7 +2,13 @@ import type { Role } from "@/lib/auth";
 import { layersForRole } from "@/lib/layers-mock";
 
 export interface LayerFeature extends GeoJSON.Feature {
-  properties: { id: number; name: string };
+  properties: {
+    id: number;
+    name: string;
+    layerId: string;
+    group: string;
+    attrs: Record<string, string | number | null>;
+  };
 }
 
 export interface LayerCollection extends GeoJSON.FeatureCollection {
