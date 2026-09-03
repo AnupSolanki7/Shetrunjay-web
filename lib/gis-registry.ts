@@ -63,13 +63,19 @@ export interface LayerRegistryEntry {
 
 const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
   // --- Obj 1: Forest / vegetation cover -----------------------------------
-  // Backed by the delivered "Green Cover" raster set — the separate "Forest
-  // Cover" folder in the raw data has no extent or color documentation
-  // anywhere (every other theme has both), so it's treated as superseded
-  // rather than guessed at.
+  // Forest Cover is the 5-class density classification (Very Dense /
+  // Moderately Dense / Open Forest / Scrub / Non-Forest) — the client's
+  // colour doc calls that section "DENSITY classes", and the imagery's own
+  // palette matches it exactly. Distinct from Green Cover below, which is the
+  // 2-class binary; the two share one source folder but are different themes.
+  //
+  // NOTE: no extent is documented for Forest Cover anywhere. These are the
+  // LULC / Green Cover per-year extents, which are byte-identical to each
+  // other and derived from the same source imagery — inferred, not supplied.
+  // Replace if the client provides a Forest Cover extent doc.
   {
     id: "forest-cover",
-    name: "Forest Cover / Green Cover",
+    name: "Forest Cover",
     group: "Obj 1 — Forest Cover",
     kind: "raster",
     status: "available",
@@ -80,16 +86,24 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
       2008: { path: "gis/raster/forest-cover/2008.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
       2018: { path: "gis/raster/forest-cover/2018.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
       2025: { path: "gis/raster/forest-cover/2025.png", extent: { west: 71.728275, south: 21.452979, east: 71.822287, north: 21.511565 } },
-      2026: { path: "gis/raster/forest-cover/2026.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
     },
     visibility: "public",
   },
   {
-    id: "forest-density",
-    name: "Forest Density",
+    id: "green-cover",
+    name: "Green Cover",
     group: "Obj 1 — Forest Cover",
     kind: "raster",
-    status: "pending",
+    status: "available",
+    rasterYears: {
+      1980: { path: "gis/raster/green-cover/1980.png", extent: { west: 71.72702, south: 21.452038, east: 71.82322, north: 21.512114 } },
+      1989: { path: "gis/raster/green-cover/1989.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      1998: { path: "gis/raster/green-cover/1998.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      2008: { path: "gis/raster/green-cover/2008.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      2018: { path: "gis/raster/green-cover/2018.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      2025: { path: "gis/raster/green-cover/2025.png", extent: { west: 71.728275, south: 21.452979, east: 71.822287, north: 21.511565 } },
+      2026: { path: "gis/raster/green-cover/2026.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+    },
     visibility: "public",
   },
   {

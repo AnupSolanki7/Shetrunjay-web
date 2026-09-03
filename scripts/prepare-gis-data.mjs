@@ -73,8 +73,17 @@ const SOURCES = [
 // to RASTER_DIR. Extents live in lib/gis-registry.ts (transcribed from the
 // delivered EXTENT.docx files) — this only moves and downsamples pixels.
 const RASTER_YEAR_THEMES = [
+  // Forest Cover and Green Cover are distinct themes sharing one Drive folder:
+  // Forest Cover is the 5-class density classification (VDF/MDF/Open/Scrub/
+  // Non-Forest), Green Cover the 2-class binary. Confirmed against the client's
+  // colour doc and the images' own palettes. Forest Cover has no 2026.
   {
     id: "forest-cover",
+    dir: "Forest Cover",
+    years: { 1980: "1980.png", 1989: "1989.png", 1998: "1998.png", 2008: "2008.png", 2018: "2018.png", 2025: "2025.png" },
+  },
+  {
+    id: "green-cover",
     dir: "Green Cover",
     years: { 1980: "1980.png", 1989: "1989.png", 1998: "1998.png", 2008: "2008.png", 2018: "2018.png", 2025: "2025.png", 2026: "2026.png" },
   },

@@ -42,8 +42,21 @@ function provisionalLegend(layerId: string, classCount = 5): RasterLegend {
 // same five used across both a standalone density theme (not delivered) and
 // Vegetation Change's 25-way transition matrix below.
 const REAL_LEGENDS: Record<string, RasterLegend> = {
+  // The client's colour doc labels this section "DENSITY classes" — it is the
+  // Forest Cover theme's legend (the imagery's own palette matches it exactly).
   "forest-cover": {
     layerId: "forest-cover",
+    classes: [
+      { value: 1, label: "Very Dense Forest", color: "#06660c" },
+      { value: 2, label: "Moderately Dense Forest", color: "#05ba19" },
+      { value: 3, label: "Open Forest", color: "#00ef67" },
+      { value: 4, label: "Scrub", color: "#ffeb00" },
+      { value: 5, label: "Non Forest", color: "#7f645b" },
+    ],
+    note: "The 1980 image is off-palette vs the other years in the delivered data — its colours won't match these swatches exactly.",
+  },
+  "green-cover": {
+    layerId: "green-cover",
     classes: [
       { value: 1, label: "Non-Forest", color: "#dedede" },
       { value: 2, label: "Forest", color: "#0a8d23" },
@@ -142,7 +155,6 @@ const REAL_LEGENDS: Record<string, RasterLegend> = {
 // were only given as named external palette references ("cpt-city
 // DEM_screen", "cpt-city wiki-knutux") rather than literal hex stops.
 const PROVISIONAL_IDS = [
-  "forest-density",
   "forest-type",
   "ecological-degradation",
   "tof",
