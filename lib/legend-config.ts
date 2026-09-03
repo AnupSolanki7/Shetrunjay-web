@@ -10,6 +10,8 @@ export interface LegendClass {
   value: number | string;
   label: string;
   color: string;
+  /** Compact form, used when a long class list is laid out in columns. */
+  shortLabel?: string;
 }
 
 export interface RasterLegend {
@@ -42,8 +44,21 @@ function provisionalLegend(layerId: string, classCount = 5): RasterLegend {
 // same five used across both a standalone density theme (not delivered) and
 // Vegetation Change's 25-way transition matrix below.
 const REAL_LEGENDS: Record<string, RasterLegend> = {
+  // The client's colour doc labels this section "DENSITY classes" — it is the
+  // Forest Cover theme's legend (the imagery's own palette matches it exactly).
   "forest-cover": {
     layerId: "forest-cover",
+    classes: [
+      { value: 1, label: "Very Dense Forest", color: "#06660c" },
+      { value: 2, label: "Moderately Dense Forest", color: "#05ba19" },
+      { value: 3, label: "Open Forest", color: "#00ef67" },
+      { value: 4, label: "Scrub", color: "#ffeb00" },
+      { value: 5, label: "Non Forest", color: "#7f645b" },
+    ],
+    note: "The 1980 image is off-palette vs the other years in the delivered data — its colours won't match these swatches exactly.",
+  },
+  "green-cover": {
+    layerId: "green-cover",
     classes: [
       { value: 1, label: "Non-Forest", color: "#dedede" },
       { value: 2, label: "Forest", color: "#0a8d23" },
@@ -75,32 +90,33 @@ const REAL_LEGENDS: Record<string, RasterLegend> = {
     layerId: "vegetation-change",
     // from-density → to-density transition matrix (VDF/MDF/OF/SCRUB/NF).
     classes: [
-      { value: "VDF-VDF", label: "Very Dense Forest → Very Dense Forest", color: "#006400" },
-      { value: "VDF-MDF", label: "Very Dense Forest → Moderately Dense Forest", color: "#00A651" },
-      { value: "VDF-OF", label: "Very Dense Forest → Open Forest", color: "#a6c34a" },
-      { value: "VDF-SCRUB", label: "Very Dense Forest → Scrub", color: "#FF8C00" },
-      { value: "VDF-NF", label: "Very Dense Forest → Non Forest", color: "#FF1493" },
-      { value: "MDF-VDF", label: "Moderately Dense Forest → Very Dense Forest", color: "#800080" },
-      { value: "MDF-MDF", label: "Moderately Dense Forest → Moderately Dense Forest", color: "#6db27c" },
-      { value: "MDF-OF", label: "Moderately Dense Forest → Open Forest", color: "#FFD700" },
-      { value: "MDF-SCRUB", label: "Moderately Dense Forest → Scrub", color: "#ff6b63" },
-      { value: "MDF-NF", label: "Moderately Dense Forest → Non Forest", color: "#bc3a4b" },
-      { value: "OF-VDF", label: "Open Forest → Very Dense Forest", color: "#9C27B0" },
-      { value: "OF-MDF", label: "Open Forest → Moderately Dense Forest", color: "#00ff00" },
-      { value: "OF-OF", label: "Open Forest → Open Forest", color: "#FFFF00" },
-      { value: "OF-SCRUB", label: "Open Forest → Scrub", color: "#FF6600" },
-      { value: "OF-NF", label: "Open Forest → Non Forest", color: "#ff0000" },
-      { value: "SCRUB-VDF", label: "Scrub → Very Dense Forest", color: "#FFB6C1" },
-      { value: "SCRUB-MDF", label: "Scrub → Moderately Dense Forest", color: "#FF69B4" },
-      { value: "SCRUB-OF", label: "Scrub → Open Forest", color: "#DAA520" },
-      { value: "SCRUB-SCRUB", label: "Scrub → Scrub", color: "#789410" },
-      { value: "SCRUB-NF", label: "Scrub → Non Forest", color: "#A52A2A" },
-      { value: "NF-VDF", label: "Non Forest → Very Dense Forest", color: "#F48FB1" },
-      { value: "NF-MDF", label: "Non Forest → Moderately Dense Forest", color: "#E91E63" },
-      { value: "NF-OF", label: "Non Forest → Open Forest", color: "#B8860B" },
-      { value: "NF-SCRUB", label: "Non Forest → Scrub", color: "#cd9661" },
-      { value: "NF-NF", label: "Non Forest → Non Forest", color: "#710000" },
+      { value: "VDF-VDF", label: "Very Dense Forest → Very Dense Forest", shortLabel: "VDF → VDF", color: "#006400" },
+      { value: "VDF-MDF", label: "Very Dense Forest → Moderately Dense Forest", shortLabel: "VDF → MDF", color: "#00A651" },
+      { value: "VDF-OF", label: "Very Dense Forest → Open Forest", shortLabel: "VDF → OF", color: "#a6c34a" },
+      { value: "VDF-SCRUB", label: "Very Dense Forest → Scrub", shortLabel: "VDF → Scrub", color: "#FF8C00" },
+      { value: "VDF-NF", label: "Very Dense Forest → Non Forest", shortLabel: "VDF → NF", color: "#FF1493" },
+      { value: "MDF-VDF", label: "Moderately Dense Forest → Very Dense Forest", shortLabel: "MDF → VDF", color: "#800080" },
+      { value: "MDF-MDF", label: "Moderately Dense Forest → Moderately Dense Forest", shortLabel: "MDF → MDF", color: "#6db27c" },
+      { value: "MDF-OF", label: "Moderately Dense Forest → Open Forest", shortLabel: "MDF → OF", color: "#FFD700" },
+      { value: "MDF-SCRUB", label: "Moderately Dense Forest → Scrub", shortLabel: "MDF → Scrub", color: "#ff6b63" },
+      { value: "MDF-NF", label: "Moderately Dense Forest → Non Forest", shortLabel: "MDF → NF", color: "#bc3a4b" },
+      { value: "OF-VDF", label: "Open Forest → Very Dense Forest", shortLabel: "OF → VDF", color: "#9C27B0" },
+      { value: "OF-MDF", label: "Open Forest → Moderately Dense Forest", shortLabel: "OF → MDF", color: "#00ff00" },
+      { value: "OF-OF", label: "Open Forest → Open Forest", shortLabel: "OF → OF", color: "#FFFF00" },
+      { value: "OF-SCRUB", label: "Open Forest → Scrub", shortLabel: "OF → Scrub", color: "#FF6600" },
+      { value: "OF-NF", label: "Open Forest → Non Forest", shortLabel: "OF → NF", color: "#ff0000" },
+      { value: "SCRUB-VDF", label: "Scrub → Very Dense Forest", shortLabel: "Scrub → VDF", color: "#FFB6C1" },
+      { value: "SCRUB-MDF", label: "Scrub → Moderately Dense Forest", shortLabel: "Scrub → MDF", color: "#FF69B4" },
+      { value: "SCRUB-OF", label: "Scrub → Open Forest", shortLabel: "Scrub → OF", color: "#DAA520" },
+      { value: "SCRUB-SCRUB", label: "Scrub → Scrub", shortLabel: "Scrub → Scrub", color: "#789410" },
+      { value: "SCRUB-NF", label: "Scrub → Non Forest", shortLabel: "Scrub → NF", color: "#A52A2A" },
+      { value: "NF-VDF", label: "Non Forest → Very Dense Forest", shortLabel: "NF → VDF", color: "#F48FB1" },
+      { value: "NF-MDF", label: "Non Forest → Moderately Dense Forest", shortLabel: "NF → MDF", color: "#E91E63" },
+      { value: "NF-OF", label: "Non Forest → Open Forest", shortLabel: "NF → OF", color: "#B8860B" },
+      { value: "NF-SCRUB", label: "Non Forest → Scrub", shortLabel: "NF → Scrub", color: "#cd9661" },
+      { value: "NF-NF", label: "Non Forest → Non Forest", shortLabel: "NF → NF", color: "#710000" },
     ],
+    note: "VDF very dense · MDF moderately dense · OF open forest · NF non forest.",
   },
   chm: {
     layerId: "chm",
@@ -142,7 +158,6 @@ const REAL_LEGENDS: Record<string, RasterLegend> = {
 // were only given as named external palette references ("cpt-city
 // DEM_screen", "cpt-city wiki-knutux") rather than literal hex stops.
 const PROVISIONAL_IDS = [
-  "forest-density",
   "forest-type",
   "ecological-degradation",
   "tof",

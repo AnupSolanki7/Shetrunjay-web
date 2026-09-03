@@ -22,7 +22,8 @@ import { ForestCoverPanel } from "@/components/ForestCoverPanel";
 import { getToken, type Role } from "@/lib/auth";
 import { useAuthState } from "@/hooks/use-auth-state";
 import { fetchLayers, UnauthorizedError, type LayerCollection } from "@/lib/layers-api";
-import { registryForRole } from "@/lib/gis-registry";
+import { registryForRole, registryEntry } from "@/lib/gis-registry";
+import { themesForRole } from "@/lib/themes";
 import { getYearColor, type ForestCoverYear, type ForestCoverSource } from "@/lib/forest-cover-mock";
 import { cn } from "@/lib/utils";
 import type { ThemeOverlay, ActiveRasterLayer } from "@/components/Map";
@@ -54,6 +55,7 @@ export function MapDashboard() {
   // lib/layers-api.ts's own roleFromToken().
   const role = (auth.user?.role as Role | undefined) ?? null;
   const registryLayers = registryForRole(role);
+  const themes = themesForRole(role);
 
   // Refetch whenever the token or retry count changes — with no token the
   // API resolves the request to its public role rather than rejecting it,
@@ -85,6 +87,26 @@ export function MapDashboard() {
 
   function changeRasterYear(id: string, year: number) {
     setRasterYear((y) => ({ ...y, [id]: year }));
+  }
+
+  // Themes are a curated entry point to a single layer: selecting one turns
+  // its layer on and turns the previously selected theme's layer back off.
+  // Both write the same `visibility` state the layer panel reads, so the two
+  // surfaces can't drift out of sync.
+  function selectTheme(key: string | null) {
+    const previous = themes.find((t) => t.key === selectedTheme);
+    const next = themes.find((t) => t.key === key);
+
+    setVisibility((v) => {
+      const updated = { ...v };
+      const previousEntry = previous && registryEntry(previous.layerId);
+      const nextEntry = next && registryEntry(next.layerId);
+      if (previousEntry) updated[previousEntry.numericId] = false;
+      if (nextEntry) updated[nextEntry.numericId] = true;
+      return updated;
+    });
+
+    setSelectedTheme(key);
   }
 
   const visibleLayers = (layers ?? EMPTY).features;
@@ -175,8 +197,9 @@ export function MapDashboard() {
               onCollapse={() => setSidebarCollapsed(true)}
             />
             <ThemeFilterPanel
+              themes={themes}
               selectedTheme={selectedTheme}
-              onSelectTheme={setSelectedTheme}
+              onSelectTheme={selectTheme}
               bare
             />
             <LayerPanel
@@ -208,7 +231,7 @@ export function MapDashboard() {
         <LegendCard
           layers={visibleLayers}
           rasterLayers={legendRasterLayers}
-          className="absolute right-4 bottom-4 hidden w-64 xl:flex"
+          className="absolute right-4 bottom-4 hidden max-h-[calc(100%-2rem)] w-64 overflow-y-auto scrollbar-thin xl:flex"
         />
       </div>
 
@@ -273,7 +296,7 @@ export function MapDashboard() {
       <Sheet open={mobileSheet === "themes"} onOpenChange={(o) => setMobileSheet(o ? "themes" : null)}>
         <SheetContent side="bottom" className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto scrollbar-thin">
           <SheetTitle className="sr-only">Themes</SheetTitle>
-          <ThemeFilterPanel selectedTheme={selectedTheme} onSelectTheme={setSelectedTheme} />
+          <ThemeFilterPanel themes={themes} selectedTheme={selectedTheme} onSelectTheme={selectTheme} />
           {selectedTheme === "forest_cover" && (
             <ForestCoverPanel
               year={forestCoverYear}

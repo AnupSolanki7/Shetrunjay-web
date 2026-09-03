@@ -28,6 +28,13 @@ function uniqueLayers(features: LayerFeature[]): LayerFeature[] {
   return [...seen.values()];
 }
 
+// Above this many classes a single column gets too tall for the card.
+const TWO_COLUMN_THRESHOLD = 8;
+
+function isLong(legend: { classes: unknown[] }): boolean {
+  return legend.classes.length > TWO_COLUMN_THRESHOLD;
+}
+
 export interface LegendRasterLayer {
   id: string;
   name: string;
@@ -66,13 +73,16 @@ export function LegendCard({
           </Button>
         </CardAction>
       </CardHeader>
+      {/* No max-height/scroll on the content: every entry stays visible, since
+          a scrollbar inside the legend is easy to miss. The caller caps the
+          card against the map area as an off-screen safety. */}
       {!collapsed && (
-        <CardContent className="flex max-h-64 flex-col gap-3 overflow-y-auto scrollbar-thin">
+        <CardContent className="flex flex-col gap-3">
           {rows.length > 0 && (
             <div className="flex flex-col gap-1.5">
               {rows.map((feature) => (
                 <div key={feature.properties.id} className="flex items-center gap-2 text-sm">
-                  <LayerSwatch id={feature.properties.id} geometryKind={geometryKindOf(feature)} />
+                  <LayerSwatch color={feature.properties.color} geometryKind={geometryKindOf(feature)} />
                   <span>{feature.properties.name}</span>
                 </div>
               ))}
@@ -89,16 +99,23 @@ export function LegendCard({
                 ) : (
                   legend && (
                     <div className="flex flex-col gap-1">
-                      {legend.classes.map((cls) => (
-                        <div key={cls.value} className="flex items-center gap-2 text-xs">
-                          <span
-                            className="size-2.5 shrink-0 rounded-full"
-                            style={{ backgroundColor: cls.color }}
-                            aria-hidden
-                          />
-                          <span className="truncate">{cls.label}</span>
-                        </div>
-                      ))}
+                      {/* Long class lists (e.g. Vegetation Change's 25-way
+                          transition matrix) go two-up with their compact
+                          labels, so the legend still fits without scrolling. */}
+                      <div className={cn("gap-x-2 gap-y-1", isLong(legend) ? "grid grid-cols-2" : "flex flex-col")}>
+                        {legend.classes.map((cls) => (
+                          <div key={cls.value} className="flex items-center gap-1.5 text-xs">
+                            <span
+                              className="size-2.5 shrink-0 rounded-full"
+                              style={{ backgroundColor: cls.color }}
+                              aria-hidden
+                            />
+                            <span className="truncate" title={cls.label}>
+                              {isLong(legend) ? (cls.shortLabel ?? cls.label) : cls.label}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
                       {legend.note && (
                         <span className="text-[10px] text-muted-foreground/70 italic">{legend.note}</span>
                       )}

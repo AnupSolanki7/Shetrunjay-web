@@ -1,6 +1,7 @@
 import type { Role } from "@/lib/auth";
 import type { LayerCollection, LayerFeature } from "@/lib/layers-api";
 import { GIS_REGISTRY, isVisibleToRole, type LayerRegistryEntry } from "@/lib/gis-registry";
+import { colorForLayer } from "@/lib/layer-style";
 
 // Static stand-in for the Go API's /api/layers + /api/login, so this frontend
 // can run as a demo with no backend. Per-layer geometry is served from
@@ -43,6 +44,7 @@ async function loadLayer(entry: LayerRegistryEntry): Promise<LayerFeature[]> {
         name: entry.name,
         layerId: entry.id,
         group: entry.group,
+        color: colorForLayer(entry),
         attrs: pickAttrs(feature.properties, entry.attributeFields),
       },
     })) as LayerFeature[];

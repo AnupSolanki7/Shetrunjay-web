@@ -95,24 +95,42 @@
   },
   "rasters": {
     "forest-cover/1980": {
-      "bytes": 83118
+      "bytes": 262917
     },
     "forest-cover/1989": {
-      "bytes": 128219
+      "bytes": 302816
     },
     "forest-cover/1998": {
-      "bytes": 205693
+      "bytes": 349256
     },
     "forest-cover/2008": {
-      "bytes": 154846
+      "bytes": 335796
     },
     "forest-cover/2018": {
-      "bytes": 207309
+      "bytes": 377988
     },
     "forest-cover/2025": {
+      "bytes": 303835
+    },
+    "green-cover/1980": {
+      "bytes": 83118
+    },
+    "green-cover/1989": {
+      "bytes": 128219
+    },
+    "green-cover/1998": {
+      "bytes": 205693
+    },
+    "green-cover/2008": {
+      "bytes": 154846
+    },
+    "green-cover/2018": {
+      "bytes": 207309
+    },
+    "green-cover/2025": {
       "bytes": 103907
     },
-    "forest-cover/2026": {
+    "green-cover/2026": {
       "bytes": 133157
     },
     "lulc/1980": {

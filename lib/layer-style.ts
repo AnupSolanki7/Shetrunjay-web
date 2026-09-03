@@ -15,3 +15,9 @@ const LAYER_PALETTE = [
 export function layerColor(id: number): string {
   return LAYER_PALETTE[((id % LAYER_PALETTE.length) + LAYER_PALETTE.length) % LAYER_PALETTE.length];
 }
+
+// Registry-declared colour wins; the rotating palette is the fallback for
+// entries without one (raster themes, which carry a class legend instead).
+export function colorForLayer(entry: { numericId: number; color?: string }): string {
+  return entry.color ?? layerColor(entry.numericId);
+}

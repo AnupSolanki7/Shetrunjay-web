@@ -6,14 +6,16 @@ import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/componen
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { THEMES } from "@/lib/themes";
+import type { ThemeDef } from "@/lib/themes";
 
 export function ThemeFilterPanel({
+  themes,
   selectedTheme,
   onSelectTheme,
   bare = false,
   className,
 }: {
+  themes: ThemeDef[];
   selectedTheme: string | null;
   onSelectTheme: (key: string | null) => void;
   bare?: boolean;
@@ -23,7 +25,7 @@ export function ThemeFilterPanel({
 
   const list = (
     <div className="flex flex-col gap-1">
-      {THEMES.map((theme) => {
+      {themes.map((theme) => {
         const active = selectedTheme === theme.key;
         return (
           <button

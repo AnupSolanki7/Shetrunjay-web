@@ -29,13 +29,15 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem("theme");var d=t?t==="dark":window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.classList.toggle("dark",d);}catch(e){}})();`,
-          }}
-        />
-      </head>
+      {/*
+        Dark mode is disabled for now. This used to carry a bootstrap script
+        that set the `dark` class from localStorage or the OS colour-scheme
+        preference before first paint. Without it the app always renders
+        light, regardless of system settings. To re-enable: restore the
+        script here and uncomment <ThemeToggle /> in components/Header.tsx —
+        the `.dark` styles in globals.css and the map's dark basemap are
+        both still in place and will start working again.
+      */}
       <body className="min-h-full flex flex-col">
         <TooltipProvider delayDuration={300}>{children}</TooltipProvider>
       </body>

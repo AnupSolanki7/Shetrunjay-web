@@ -4,6 +4,15 @@ import type { Role } from "@/lib/auth";
 // not real data has arrived yet. Rows with status "pending" render disabled
 // in the layer panel rather than disappearing — see PROJECT.md for the data
 // inventory this was built from.
+//
+// NOT MODELLED YET: the client's 42-row spec sheet marks each layer as either
+// "Statistics" or "Info" in its Other column — statistics layers (Forest
+// Cover, Density, Vegetation Change, Forest Type, Ecological Degradation,
+// LULC, TOF, Growing Stock, Habitat Suitability) are meant to surface zonal
+// numbers, the rest just an attribute popup. Every layer currently gets the
+// popup only. Deferred: no zonal-statistics data has been delivered, so a
+// stats surface would render empty (lib/forest-cover-mock.ts holds the one
+// illustrative placeholder set).
 
 export type LayerKind = "raster" | "vector" | "pending";
 export type LayerStatus = "available" | "pending";
@@ -58,18 +67,41 @@ export interface LayerRegistryEntry {
   attributeFields?: string[];
   /** Dominant geometry type — drives the layer-panel/legend swatch shape. Available vector layers only. */
   geometryKind?: "point" | "line" | "polygon";
+  /**
+   * Explicit render colour. The client's docs specify colours per raster
+   * theme (see lib/legend-config.ts) but none for vectors, so these are
+   * chosen here: conventional (water blue, roads grey, forest green) and
+   * deliberately collision-free. Override freely if the client supplies a
+   * vector colour spec. Falls back to the rotating palette when unset.
+   */
+  color?: string;
   visibility: LayerVisibility;
 }
 
 const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
   // --- Obj 1: Forest / vegetation cover -----------------------------------
-  // Backed by the delivered "Green Cover" raster set — the separate "Forest
-  // Cover" folder in the raw data has no extent or color documentation
-  // anywhere (every other theme has both), so it's treated as superseded
-  // rather than guessed at.
+  // Forest Cover is the 5-class density classification (Very Dense /
+  // Moderately Dense / Open Forest / Scrub / Non-Forest) — the client's
+  // colour doc calls that section "DENSITY classes", and the imagery's own
+  // palette matches it exactly. Distinct from Green Cover below, which is the
+  // 2-class binary; the two share one source folder but are different themes.
+  //
+  // OPEN QUESTION — the name, not the data. The client's two references
+  // disagree: their layer-links doc lists "Forest Cover" + "Green Cover" with
+  // no density row (what's implemented here), while the original 42-row spec
+  // sheet lists "Forest Cover/Green Cover" as ONE row plus a separate "Forest
+  // Density" row — under which this 5-class layer would be "Forest Density"
+  // and the 2-class one would be "Forest Cover / Green Cover". The palettes
+  // and imagery pairing are correct either way; only the label is unresolved.
+  // Awaiting client confirmation before renaming.
+  //
+  // NOTE: no extent is documented for Forest Cover anywhere. These are the
+  // LULC / Green Cover per-year extents, which are byte-identical to each
+  // other and derived from the same source imagery — inferred, not supplied.
+  // Replace if the client provides a Forest Cover extent doc.
   {
     id: "forest-cover",
-    name: "Forest Cover / Green Cover",
+    name: "Forest Cover",
     group: "Obj 1 — Forest Cover",
     kind: "raster",
     status: "available",
@@ -80,16 +112,24 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
       2008: { path: "gis/raster/forest-cover/2008.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
       2018: { path: "gis/raster/forest-cover/2018.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
       2025: { path: "gis/raster/forest-cover/2025.png", extent: { west: 71.728275, south: 21.452979, east: 71.822287, north: 21.511565 } },
-      2026: { path: "gis/raster/forest-cover/2026.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
     },
     visibility: "public",
   },
   {
-    id: "forest-density",
-    name: "Forest Density",
+    id: "green-cover",
+    name: "Green Cover",
     group: "Obj 1 — Forest Cover",
     kind: "raster",
-    status: "pending",
+    status: "available",
+    rasterYears: {
+      1980: { path: "gis/raster/green-cover/1980.png", extent: { west: 71.72702, south: 21.452038, east: 71.82322, north: 21.512114 } },
+      1989: { path: "gis/raster/green-cover/1989.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      1998: { path: "gis/raster/green-cover/1998.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      2008: { path: "gis/raster/green-cover/2008.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      2018: { path: "gis/raster/green-cover/2018.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+      2025: { path: "gis/raster/green-cover/2025.png", extent: { west: 71.728275, south: 21.452979, east: 71.822287, north: 21.511565 } },
+      2026: { path: "gis/raster/green-cover/2026.png", extent: { west: 71.727566, south: 21.452156, east: 71.82277, north: 21.511847 } },
+    },
     visibility: "public",
   },
   {
@@ -171,6 +211,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/forest-boundary.geojson",
     geometryKind: "polygon",
+    color: "#15803D",
     attributeFields: ["F_TYPE"],
     visibility: "public",
   },
@@ -194,6 +235,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/survey-number.geojson",
     geometryKind: "polygon",
+    color: "#B91C1C",
     attributeFields: ["Plot_No", "Village"],
     // Land-record data — authenticated users only.
     visibility: AUTHENTICATED,
@@ -244,6 +286,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/streams.geojson",
     geometryKind: "line",
+    color: "#38BDF8",
     attributeFields: ["strmOrder", "Length"],
     visibility: "public",
   },
@@ -255,6 +298,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/catchments.geojson",
     geometryKind: "polygon",
+    color: "#0D9488",
     attributeFields: ["Area", "Subbasin"],
     visibility: "public",
   },
@@ -312,6 +356,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/district.geojson",
     geometryKind: "polygon",
+    color: "#7C3AED",
     attributeFields: ["District"],
     visibility: "public",
   },
@@ -323,6 +368,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/taluka.geojson",
     geometryKind: "polygon",
+    color: "#DB2777",
     attributeFields: ["Taluka"],
     visibility: "public",
   },
@@ -334,6 +380,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/village.geojson",
     geometryKind: "polygon",
+    color: "#CA8A04",
     attributeFields: ["Village"],
     visibility: "public",
   },
@@ -345,6 +392,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/roads.geojson",
     geometryKind: "line",
+    color: "#57534E",
     attributeFields: ["Category", "NAME"],
     visibility: "public",
   },
@@ -364,6 +412,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/rivers.geojson",
     geometryKind: "line",
+    color: "#2563EB",
     attributeFields: ["Categories"],
     visibility: "public",
   },
@@ -487,6 +536,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/grids.geojson",
     geometryKind: "polygon",
+    color: "#94A3B8",
     attributeFields: ["GridNum"],
     visibility: AUTHENTICATED,
   },
@@ -498,6 +548,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/zones.geojson",
     geometryKind: "polygon",
+    color: "#4338CA",
     attributeFields: ["ZName"],
     visibility: AUTHENTICATED,
   },
@@ -509,6 +560,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/tracks.geojson",
     geometryKind: "line",
+    color: "#A16207",
     attributeFields: ["Name"],
     visibility: "public",
   },
@@ -520,6 +572,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/steps.geojson",
     geometryKind: "line",
+    color: "#C2410C",
     attributeFields: ["Name"],
     visibility: "public",
   },
@@ -533,6 +586,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-vantalavadi.geojson",
     geometryKind: "polygon",
+    color: "#059669",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -544,6 +598,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-matipala.geojson",
     geometryKind: "polygon",
+    color: "#EA580C",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -555,6 +610,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-checkdam.geojson",
     geometryKind: "polygon",
+    color: "#0369A1",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -566,6 +622,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-causeway.geojson",
     geometryKind: "polygon",
+    color: "#9333EA",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -587,6 +644,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/study-area.geojson",
     geometryKind: "polygon",
+    color: "#1F2937",
     visibility: "public",
   },
 ];

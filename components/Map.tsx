@@ -12,7 +12,6 @@ import {
 } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { boundsOfFeature } from "@/lib/geo";
-import { layerColor } from "@/lib/layer-style";
 import { MapControls } from "@/components/MapControls";
 import type { LayerFeature, LayerCollection } from "@/lib/layers-api";
 import type { RasterExtent } from "@/lib/gis-registry";
@@ -213,7 +212,7 @@ function byGeometryType(
         properties: {
           id: f.properties.id,
           name: f.properties.name,
-          color: layerColor(f.properties.id),
+          color: f.properties.color,
           ...flattenAttrs(f.properties.attrs),
         },
       })),
