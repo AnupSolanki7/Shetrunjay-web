@@ -58,6 +58,14 @@ export interface LayerRegistryEntry {
   attributeFields?: string[];
   /** Dominant geometry type — drives the layer-panel/legend swatch shape. Available vector layers only. */
   geometryKind?: "point" | "line" | "polygon";
+  /**
+   * Explicit render colour. The client's docs specify colours per raster
+   * theme (see lib/legend-config.ts) but none for vectors, so these are
+   * chosen here: conventional (water blue, roads grey, forest green) and
+   * deliberately collision-free. Override freely if the client supplies a
+   * vector colour spec. Falls back to the rotating palette when unset.
+   */
+  color?: string;
   visibility: LayerVisibility;
 }
 
@@ -185,6 +193,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/forest-boundary.geojson",
     geometryKind: "polygon",
+    color: "#15803D",
     attributeFields: ["F_TYPE"],
     visibility: "public",
   },
@@ -208,6 +217,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/survey-number.geojson",
     geometryKind: "polygon",
+    color: "#B91C1C",
     attributeFields: ["Plot_No", "Village"],
     // Land-record data — authenticated users only.
     visibility: AUTHENTICATED,
@@ -258,6 +268,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/streams.geojson",
     geometryKind: "line",
+    color: "#38BDF8",
     attributeFields: ["strmOrder", "Length"],
     visibility: "public",
   },
@@ -269,6 +280,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/catchments.geojson",
     geometryKind: "polygon",
+    color: "#0D9488",
     attributeFields: ["Area", "Subbasin"],
     visibility: "public",
   },
@@ -326,6 +338,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/district.geojson",
     geometryKind: "polygon",
+    color: "#7C3AED",
     attributeFields: ["District"],
     visibility: "public",
   },
@@ -337,6 +350,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/taluka.geojson",
     geometryKind: "polygon",
+    color: "#DB2777",
     attributeFields: ["Taluka"],
     visibility: "public",
   },
@@ -348,6 +362,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/village.geojson",
     geometryKind: "polygon",
+    color: "#CA8A04",
     attributeFields: ["Village"],
     visibility: "public",
   },
@@ -359,6 +374,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/roads.geojson",
     geometryKind: "line",
+    color: "#57534E",
     attributeFields: ["Category", "NAME"],
     visibility: "public",
   },
@@ -378,6 +394,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/rivers.geojson",
     geometryKind: "line",
+    color: "#2563EB",
     attributeFields: ["Categories"],
     visibility: "public",
   },
@@ -501,6 +518,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/grids.geojson",
     geometryKind: "polygon",
+    color: "#94A3B8",
     attributeFields: ["GridNum"],
     visibility: AUTHENTICATED,
   },
@@ -512,6 +530,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/zones.geojson",
     geometryKind: "polygon",
+    color: "#4338CA",
     attributeFields: ["ZName"],
     visibility: AUTHENTICATED,
   },
@@ -523,6 +542,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/tracks.geojson",
     geometryKind: "line",
+    color: "#A16207",
     attributeFields: ["Name"],
     visibility: "public",
   },
@@ -534,6 +554,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/steps.geojson",
     geometryKind: "line",
+    color: "#C2410C",
     attributeFields: ["Name"],
     visibility: "public",
   },
@@ -547,6 +568,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-vantalavadi.geojson",
     geometryKind: "polygon",
+    color: "#059669",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -558,6 +580,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-matipala.geojson",
     geometryKind: "polygon",
+    color: "#EA580C",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -569,6 +592,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-checkdam.geojson",
     geometryKind: "polygon",
+    color: "#0369A1",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -580,6 +604,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/smc-causeway.geojson",
     geometryKind: "polygon",
+    color: "#9333EA",
     attributeFields: ["Feature"],
     visibility: AUTHENTICATED,
   },
@@ -601,6 +626,7 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
     status: "available",
     assetPath: "gis/vector/study-area.geojson",
     geometryKind: "polygon",
+    color: "#1F2937",
     visibility: "public",
   },
 ];

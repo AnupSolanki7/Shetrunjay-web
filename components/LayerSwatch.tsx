@@ -1,10 +1,6 @@
-import { layerColor } from "@/lib/layer-style";
-
 export type SwatchGeometryKind = "point" | "line" | "polygon";
 
-export function LayerSwatch({ id, geometryKind }: { id: number; geometryKind: SwatchGeometryKind }) {
-  const color = layerColor(id);
-
+export function LayerSwatch({ color, geometryKind }: { color: string; geometryKind: SwatchGeometryKind }) {
   if (geometryKind === "point") {
     return (
       <span

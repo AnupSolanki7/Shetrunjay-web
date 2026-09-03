@@ -72,7 +72,7 @@ export function LegendCard({
             <div className="flex flex-col gap-1.5">
               {rows.map((feature) => (
                 <div key={feature.properties.id} className="flex items-center gap-2 text-sm">
-                  <LayerSwatch id={feature.properties.id} geometryKind={geometryKindOf(feature)} />
+                  <LayerSwatch color={feature.properties.color} geometryKind={geometryKindOf(feature)} />
                   <span>{feature.properties.name}</span>
                 </div>
               ))}

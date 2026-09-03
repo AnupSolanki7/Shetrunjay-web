@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { LayerSwatch } from "@/components/LayerSwatch";
+import { colorForLayer } from "@/lib/layer-style";
 import { cn } from "@/lib/utils";
 import type { LayerRegistryEntry } from "@/lib/gis-registry";
 
@@ -105,7 +106,7 @@ export function LayerPanel({
                   {pending ? (
                     <span className="size-2.5 shrink-0 rounded-full bg-muted-foreground/30" aria-hidden />
                   ) : (
-                    <LayerSwatch id={layer.numericId} geometryKind={layer.geometryKind ?? "polygon"} />
+                    <LayerSwatch color={colorForLayer(layer)} geometryKind={layer.geometryKind ?? "polygon"} />
                   )}
                   <span className="flex-1 truncate text-sm">{layer.name}</span>
                   {pending ? (

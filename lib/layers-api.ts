@@ -7,6 +7,7 @@ export interface LayerFeature extends GeoJSON.Feature {
     name: string;
     layerId: string;
     group: string;
+    color: string;
     attrs: Record<string, string | number | null>;
   };
 }
