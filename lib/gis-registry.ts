@@ -4,6 +4,15 @@ import type { Role } from "@/lib/auth";
 // not real data has arrived yet. Rows with status "pending" render disabled
 // in the layer panel rather than disappearing — see PROJECT.md for the data
 // inventory this was built from.
+//
+// NOT MODELLED YET: the client's 42-row spec sheet marks each layer as either
+// "Statistics" or "Info" in its Other column — statistics layers (Forest
+// Cover, Density, Vegetation Change, Forest Type, Ecological Degradation,
+// LULC, TOF, Growing Stock, Habitat Suitability) are meant to surface zonal
+// numbers, the rest just an attribute popup. Every layer currently gets the
+// popup only. Deferred: no zonal-statistics data has been delivered, so a
+// stats surface would render empty (lib/forest-cover-mock.ts holds the one
+// illustrative placeholder set).
 
 export type LayerKind = "raster" | "vector" | "pending";
 export type LayerStatus = "available" | "pending";
@@ -76,6 +85,15 @@ const REGISTRY_DEFINITIONS: Omit<LayerRegistryEntry, "numericId">[] = [
   // colour doc calls that section "DENSITY classes", and the imagery's own
   // palette matches it exactly. Distinct from Green Cover below, which is the
   // 2-class binary; the two share one source folder but are different themes.
+  //
+  // OPEN QUESTION — the name, not the data. The client's two references
+  // disagree: their layer-links doc lists "Forest Cover" + "Green Cover" with
+  // no density row (what's implemented here), while the original 42-row spec
+  // sheet lists "Forest Cover/Green Cover" as ONE row plus a separate "Forest
+  // Density" row — under which this 5-class layer would be "Forest Density"
+  // and the 2-class one would be "Forest Cover / Green Cover". The palettes
+  // and imagery pairing are correct either way; only the label is unresolved.
+  // Awaiting client confirmation before renaming.
   //
   // NOTE: no extent is documented for Forest Cover anywhere. These are the
   // LULC / Green Cover per-year extents, which are byte-identical to each
