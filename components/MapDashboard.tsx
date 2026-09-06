@@ -36,6 +36,27 @@ const EMPTY: LayerCollection = { type: "FeatureCollection", features: [] };
 
 type MobileSheet = "menu" | "legend" | null;
 
+// Sections whose geometry draws with a looping dash animation travelling
+// along each line — flow on the linear features, marching ants on the
+// boundaries.
+//
+// Both are networks rather than thematic surfaces, which is what makes the
+// motion worth having: it traces where a road or a stream actually runs, and
+// tells this connective geometry apart from the Theme/LiDAR rasters at a
+// glance. Streams in particular read as direction of flow. The sections are
+// an accordion, so at most one of these is ever animating at a time.
+const ANIMATED_SECTIONS = ["Base Layers", "Watershed Analysis"];
+
+// Resolved once at module scope: SECTIONS and the registry are both static.
+// Pending rows have no geometry to animate, so they drop out here.
+const ANIMATED_LAYER_IDS: number[] = SECTIONS.filter((section) =>
+  ANIMATED_SECTIONS.includes(section.label),
+)
+  .flatMap((section) => section.items ?? [])
+  .map((item) => (item.layerId ? registryEntry(item.layerId) : undefined))
+  .filter((entry) => entry?.status === "available")
+  .map((entry) => entry!.numericId);
+
 export function MapDashboard() {
   const auth = useAuthState();
   const [layers, setLayers] = useState<LayerCollection | null>(null);
@@ -257,6 +278,7 @@ export function MapDashboard() {
               visibility={visibility}
               onToggleLayers={() => setMobileSheet((s) => (s === "menu" ? null : "menu"))}
               rasterLayers={activeRasterLayers}
+              animatedLayerIds={ANIMATED_LAYER_IDS}
             />
           </div>
 

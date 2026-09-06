@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Map as MapLibreMap,
   Popup,
@@ -57,6 +57,46 @@ const ATTRIBUTION_DARK = `${ATTRIBUTION_LIGHT} &copy; Esri, HERE, Garmin`;
 
 function isDark(): boolean {
   return document.documentElement.classList.contains("dark");
+}
+
+function surfaceColor(): string {
+  return isDark() ? BACKGROUND_DARK : BACKGROUND_LIGHT;
+}
+
+// Marching-ants dash frames for the Base Layers flow animation. line-dasharray
+// takes no expression, so it can't vary per feature and can't be tweened —
+// the only way to animate it is to swap the whole array each frame, which is
+// why this is a hand-rolled loop rather than a MapLibre transition.
+//
+// The sequence is the standard 14-frame one: the dash grows from the start of
+// the pattern to its end, then the gap does the same, which lands back on the
+// opening frame — so it cycles forever with no visible seam.
+const DASH_SEQUENCE: number[][] = [
+  [0, 4, 3],
+  [0.5, 4, 2.5],
+  [1, 4, 2],
+  [1.5, 4, 1.5],
+  [2, 4, 1],
+  [2.5, 4, 0.5],
+  [3, 4, 0],
+  [0, 0.5, 3, 3.5],
+  [0, 1, 3, 3],
+  [0, 1.5, 3, 2.5],
+  [0, 2, 3, 2],
+  [0, 2.5, 3, 1.5],
+  [0, 3, 3, 1],
+  [0, 3.5, 3, 0.5],
+];
+
+/** ms per frame — 14 frames, so the loop takes a shade under a second. */
+const DASH_STEP_MS = 65;
+
+const FLOW_LAYER_IDS = ["polygons-flow", "lines-flow"];
+
+const REDUCED_MOTION_QUERY = "(prefers-reduced-motion: reduce)";
+
+function prefersReducedMotion(): boolean {
+  return window.matchMedia?.(REDUCED_MOTION_QUERY).matches ?? false;
 }
 
 // MapLibre's built-in attribution control is a native <details>/<summary>
@@ -173,6 +213,11 @@ function applyBasemapTheme(map: MapLibreMap, dark: boolean, attribution: Compact
   if (map.getLayer("lines-casing")) {
     map.setPaintProperty("lines-casing", "line-color", bg);
   }
+  // The flow dashes are surface-coloured too — they read as gaps in the line
+  // beneath them, which only works while they match the map background.
+  for (const layerId of FLOW_LAYER_IDS) {
+    if (map.getLayer(layerId)) map.setPaintProperty(layerId, "line-color", bg);
+  }
   attribution.setHTML(dark ? ATTRIBUTION_DARK : ATTRIBUTION_LIGHT);
 }
 
@@ -189,14 +234,10 @@ function flattenAttrs(attrs: Record<string, string | number | null>): Record<str
   return flat;
 }
 
-function byGeometryType(
-  data: LayerCollection,
-  types: Set<string>,
-): GeoJSON.FeatureCollection {
+function byGeometryType(features: LayerFeature[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: data.features
-      .filter((f) => types.has(f.geometry.type))
+    features: features
       // colour rides along per feature so paint reads ["get", "color"] —
       // no layer name/id branch in the paint expression itself.
       .map((f) => ({
@@ -218,7 +259,7 @@ function escapeHtml(value: string): string {
 // Click popup: layer name plus whatever attribute fields the registry
 // declared for that layer (lib/gis-registry.ts's attributeFields), read back
 // off the attr_<field> scalars byGeometryType() flattened onto the source.
-function attachPopups(map: MapLibreMap) {
+function attachPopups(map: MapLibreMap): Popup {
   const layerIds = ["polygons-fill", "lines", "points"];
   const popup = new Popup({ closeButton: true, closeOnClick: true, maxWidth: "260px" });
 
@@ -251,6 +292,8 @@ function attachPopups(map: MapLibreMap) {
       map.getCanvas().style.cursor = "";
     });
   }
+
+  return popup;
 }
 
 // Raster theme overlays (LULC, Green Cover, Vegetation Change, drone
@@ -297,15 +340,12 @@ function syncRasterLayers(
   }
 }
 
-function addLayers(
-  map: MapLibreMap,
-  polygons: GeoJSON.FeatureCollection,
-  lines: GeoJSON.FeatureCollection,
-  points: GeoJSON.FeatureCollection,
-) {
-  map.addSource("polygons", { type: "geojson", data: polygons });
-  map.addSource("lines", { type: "geojson", data: lines });
-  map.addSource("points", { type: "geojson", data: points });
+const EMPTY_SOURCE_DATA: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
+
+function addLayers(map: MapLibreMap) {
+  for (const { id } of SOURCE_KINDS) {
+    map.addSource(id, { type: "geojson", data: EMPTY_SOURCE_DATA });
+  }
 
   map.addLayer({
     id: "polygons-fill",
@@ -318,6 +358,20 @@ function addLayers(
     type: "line",
     source: "polygons",
     paint: { "line-color": ["get", "color"], "line-width": 2 },
+  });
+  // Flow overlay: surface-coloured dashes travelling along the boundary the
+  // layer above already drew in its own colour, so what animates reads as
+  // moving gaps in that line rather than as a second line of its own. Paired
+  // with its base layer in the stack — see startDashAnimation().
+  map.addLayer({
+    id: "polygons-flow",
+    type: "line",
+    source: "polygons",
+    paint: {
+      "line-color": surfaceColor(),
+      "line-width": 2,
+      "line-dasharray": DASH_SEQUENCE[0],
+    },
   });
 
   // casing under stroke: a wider surface-colour line beneath the layer
@@ -336,6 +390,21 @@ function addLayers(
     layout: { "line-cap": "round", "line-join": "round" },
     paint: { "line-color": ["get", "color"], "line-width": 3 },
   });
+  map.addLayer({
+    id: "lines-flow",
+    type: "line",
+    source: "lines",
+    // Butt caps, not round: a round cap on every dash bleeds the dashes into
+    // each other and the flow stops reading as movement.
+    layout: { "line-cap": "butt", "line-join": "round" },
+    paint: {
+      // Same width as "lines": a narrower dash would leave a sliver of layer
+      // colour down each side of the gap instead of a clean break.
+      "line-color": surfaceColor(),
+      "line-width": 3,
+      "line-dasharray": DASH_SEQUENCE[0],
+    },
+  });
 
   map.addLayer({
     id: "points",
@@ -350,38 +419,122 @@ function addLayers(
   });
 }
 
-// Allow-list filter: nothing draws until it is explicitly switched on, so an
-// empty visibility map must match no feature. Applied on every path that can
-// (re)create the vector layers, not just on toggle, or a freshly added layer
-// would render unfiltered.
-function applyVisibility(map: MapLibreMap, visibility: Record<number, boolean>) {
-  const visibleIds = Object.entries(visibility)
-    .filter(([, visible]) => visible)
-    .map(([id]) => Number(id));
-  const filter: FilterSpecification = ["in", ["get", "id"], ["literal", visibleIds]];
-  for (const layerId of ["polygons-fill", "polygons-outline", "lines-casing", "lines", "points"]) {
-    if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+// The three shared GeoJSON sources, and which geometry types feed each.
+const SOURCE_KINDS = [
+  { id: "polygons", types: POLYGON_TYPES },
+  { id: "lines", types: LINE_TYPES },
+  { id: "points", types: POINT_TYPES },
+] as const;
+
+/**
+ * What each source currently holds, so a toggle that doesn't change a given
+ * source can skip it entirely. `data` is compared by identity (a new
+ * collection means a new role's layers); `keys` is the sorted list of visible
+ * layer ids that produced each source's contents.
+ */
+export interface AppliedSources {
+  data: LayerCollection | null;
+  keys: Record<string, string>;
+}
+
+export function emptyAppliedSources(): AppliedSources {
+  return { data: null, keys: {} };
+}
+
+/**
+ * Pushes the switched-on features into the map sources.
+ *
+ * Visibility is applied HERE, by choosing what goes into each source — not
+ * with setFilter on the style layers. That is deliberate and load-bearing:
+ * Style.setFilter calls _updateLayer, which marks the whole source 'reload'
+ * and re-parses every feature in it on the worker. These sources are shared
+ * by every layer of a geometry type — the polygons source alone carries
+ * ~3,200 features / ~7 MB once District and Survey Numbers are in it — so
+ * filter-based toggling re-tessellated all of it on every switch, which is
+ * what made switching a layer off visibly lag. Feeding the source only what
+ * should draw makes the work proportional to what is actually on screen, and
+ * switching the last layer off becomes a parse of nothing.
+ *
+ * The flow layers keep a filter, but a constant one (the animated ids never
+ * change at runtime) — and setFilter no-ops on a deep-equal value, so it
+ * costs nothing after the first call.
+ */
+function syncSources(
+  map: MapLibreMap,
+  data: LayerCollection,
+  visibility: Record<number, boolean>,
+  animatedIds: number[],
+  applied: AppliedSources,
+) {
+  const dataChanged = applied.data !== data;
+
+  for (const { id, types } of SOURCE_KINDS) {
+    const features = data.features.filter(
+      (f) => visibility[f.properties.id] && types.has(f.geometry.type),
+    );
+    // Layer ids, not feature ids: what a source holds is fully determined by
+    // which layers are on, so this is a cheap and exact change check.
+    const key = [...new Set(features.map((f) => f.properties.id))].sort((a, b) => a - b).join(",");
+    if (!dataChanged && applied.keys[id] === key) continue;
+
+    const source = map.getSource<GeoJSONSource>(id);
+    if (!source) continue;
+    source.setData(byGeometryType(features));
+    applied.keys[id] = key;
+  }
+
+  applied.data = data;
+
+  const flowFilter: FilterSpecification = ["in", ["get", "id"], ["literal", animatedIds]];
+  for (const layerId of FLOW_LAYER_IDS) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, flowFilter);
   }
 }
 
-function render(map: MapLibreMap, data: LayerCollection, fitOnce: { done: boolean }) {
-  const polygons = byGeometryType(data, POLYGON_TYPES);
-  const lines = byGeometryType(data, LINE_TYPES);
-  const points = byGeometryType(data, POINT_TYPES);
+/**
+ * Drives the looping dash animation on the flow layers, and returns a stop
+ * function. Time-based rather than frame-counted, so the loop runs at the
+ * same speed on any display refresh rate, and the paint property is only
+ * touched when the frame index actually changes — at 65ms a step that is
+ * roughly every fourth animation frame on a 60Hz screen.
+ */
+function startDashAnimation(map: MapLibreMap): () => void {
+  let frame = 0;
+  let lastStep = -1;
 
-  const polygonsSource = map.getSource<GeoJSONSource>("polygons");
-  const linesSource = map.getSource<GeoJSONSource>("lines");
-  const pointsSource = map.getSource<GeoJSONSource>("points");
-
-  if (polygonsSource && linesSource && pointsSource) {
-    polygonsSource.setData(polygons);
-    linesSource.setData(lines);
-    pointsSource.setData(points);
-  } else {
-    addLayers(map, polygons, lines, points);
+  function tick(timestamp: number) {
+    const step = Math.floor(timestamp / DASH_STEP_MS) % DASH_SEQUENCE.length;
+    if (step !== lastStep) {
+      lastStep = step;
+      for (const layerId of FLOW_LAYER_IDS) {
+        if (map.getLayer(layerId)) {
+          map.setPaintProperty(layerId, "line-dasharray", DASH_SEQUENCE[step]);
+        }
+      }
+    }
+    frame = requestAnimationFrame(tick);
   }
 
+  frame = requestAnimationFrame(tick);
+  return () => cancelAnimationFrame(frame);
+}
+
+function render(
+  map: MapLibreMap,
+  data: LayerCollection,
+  visibility: Record<number, boolean>,
+  animatedIds: number[],
+  fitOnce: { done: boolean },
+  applied: AppliedSources,
+) {
+  // Sources are created empty — nothing is visible until a layer is switched
+  // on, so there is nothing to parse up front either.
+  if (!map.getSource("polygons")) addLayers(map);
+  syncSources(map, data, visibility, animatedIds, applied);
+
   if (!fitOnce.done) {
+    // Fitted against the whole dataset, not the visible subset: the initial
+    // view shouldn't depend on which layers happen to be on.
     const bounds = data.features.map(boundsOfFeature).find(Boolean);
     if (bounds) {
       map.fitBounds(bounds, { padding: 40, animate: false });
@@ -390,25 +543,49 @@ function render(map: MapLibreMap, data: LayerCollection, fitOnce: { done: boolea
   }
 }
 
+// Every effect below gates on mapReady — the "load" event having fired — and
+// NOT on map.isStyleLoaded(). They are not the same thing, and the difference
+// was a real bug: Style.loaded() also returns false while any source has a
+// pending setData, while any raster tile is in flight, or while an image
+// source is still downloading. Basemap tiles are in flight on every pan and
+// zoom, so isStyleLoaded() is false much of the time, and a toggle landing in
+// that window was dropped with no retry — the layer stayed on the map until
+// something else happened to change the effect's deps. setFilter/addLayer/
+// removeLayer/setData only need the style to exist, which "load" guarantees.
 export default function Map({
   data,
   visibility,
   onReady,
   onToggleLayers,
   rasterLayers,
+  animatedLayerIds,
 }: {
   data: LayerCollection;
   visibility: Record<number, boolean>;
   onReady?: (map: MapLibreMap) => void;
   onToggleLayers?: () => void;
   rasterLayers?: ActiveRasterLayer[];
+  /**
+   * Numeric ids whose geometry gets the looping dash animation — the Base
+   * Layers section, resolved by the caller. Everything else draws solid.
+   */
+  animatedLayerIds?: number[];
 }) {
+  const [mapReady, setMapReady] = useState(false);
+  // Seeded from the reduced-motion media query and then kept in sync with it,
+  // so turning the OS setting on stops the loop without a reload. Safe to read
+  // during the initial render: this component is only ever loaded client-side
+  // (dynamic(..., { ssr: false }) in MapDashboard).
+  const [reducedMotion, setReducedMotion] = useState(prefersReducedMotion);
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const dataRef = useRef(data);
   const visibilityRef = useRef(visibility);
   const fitOnceRef = useRef({ done: false });
   const rasterLayersRef = useRef(rasterLayers);
+  const animatedIdsRef = useRef(animatedLayerIds);
+  const popupRef = useRef<Popup | null>(null);
+  const appliedSourcesRef = useRef<AppliedSources>(emptyAppliedSources());
   // globalThis.Map, not the local Map component this function is itself named after.
   const appliedRasterRef = useRef(new globalThis.Map<string, { url: string; extent: RasterExtent }>());
 
@@ -423,6 +600,10 @@ export default function Map({
   useEffect(() => {
     rasterLayersRef.current = rasterLayers;
   }, [rasterLayers]);
+
+  useEffect(() => {
+    animatedIdsRef.current = animatedLayerIds;
+  }, [animatedLayerIds]);
 
   // map lifecycle: create once, tear down on unmount
   useEffect(() => {
@@ -440,16 +621,28 @@ export default function Map({
     const attribution = new CompactAttribution(isDark() ? ATTRIBUTION_DARK : ATTRIBUTION_LIGHT);
     map.addControl(attribution, "bottom-right");
 
+    // Mirrors the mapReady state for callbacks that live inside this
+    // mount-once effect and so can never see it.
+    let loaded = false;
+
     map.on("load", () => {
-      render(map, dataRef.current, fitOnceRef.current);
-      applyVisibility(map, visibilityRef.current);
-      attachPopups(map);
+      render(
+        map,
+        dataRef.current,
+        visibilityRef.current,
+        animatedIdsRef.current ?? [],
+        fitOnceRef.current,
+        appliedSourcesRef.current,
+      );
+      popupRef.current = attachPopups(map);
       syncRasterLayers(map, rasterLayersRef.current ?? [], appliedRasterRef.current);
+      loaded = true;
+      setMapReady(true);
       onReady?.(map);
     });
 
     const observer = new MutationObserver(() => {
-      if (!map.isStyleLoaded()) return;
+      if (!loaded) return;
       applyBasemapTheme(map, isDark(), attribution);
     });
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
@@ -462,29 +655,54 @@ export default function Map({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // data updates: push into the already-running map without recreating it
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-    render(map, data, fitOnceRef.current);
-    applyVisibility(map, visibility);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [data]);
-
   // raster overlays: add/remove/swap image sources as layers are toggled or
   // their selected year changes, without touching the vector sources.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !mapReady) return;
     syncRasterLayers(map, rasterLayers ?? [], appliedRasterRef.current);
-  }, [rasterLayers]);
+  }, [rasterLayers, mapReady]);
 
-  // visibility toggles: filter, never re-fetch or refit
+  // Data arriving and layers being toggled are the same operation now — both
+  // change which features belong in the sources — so they share one effect.
+  // Never re-fetches or refits; syncSources skips any source whose contents
+  // haven't actually changed.
   useEffect(() => {
     const map = mapRef.current;
-    if (!map || !map.isStyleLoaded()) return;
-    applyVisibility(map, visibility);
-  }, [visibility]);
+    if (!map || !mapReady) return;
+    render(
+      map,
+      data,
+      visibility,
+      animatedLayerIds ?? [],
+      fitOnceRef.current,
+      appliedSourcesRef.current,
+    );
+    // An open attribute popup is a DOM overlay, not a styled layer, so
+    // dropping the feature from the source can't hide it — switching a layer
+    // off would otherwise leave its popup floating over nothing.
+    popupRef.current?.remove();
+  }, [data, visibility, animatedLayerIds, mapReady]);
+
+  // The dash loop runs only while an animated layer is actually on screen —
+  // an rAF loop repainting the map behind a Theme raster would be pure waste.
+  // Honouring prefers-reduced-motion leaves the dashes in place but static,
+  // so the layers still look the same, just without the movement.
+  const animatedOnCount = (animatedLayerIds ?? []).filter((id) => visibility[id]).length;
+
+  useEffect(() => {
+    const media = window.matchMedia?.(REDUCED_MOTION_QUERY);
+    if (!media) return;
+    const update = () => setReducedMotion(media.matches);
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || !mapReady || animatedOnCount === 0 || reducedMotion) return;
+    return startDashAnimation(map);
+  }, [mapReady, animatedOnCount, reducedMotion]);
 
   return (
     <div className="absolute inset-0">
