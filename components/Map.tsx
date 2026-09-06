@@ -23,14 +23,6 @@ const POINT_TYPES = new Set(["Point", "MultiPoint"]);
 const BACKGROUND_LIGHT = "#EDEDE8";
 const BACKGROUND_DARK = "#0E100F";
 
-const EMPTY_FC: GeoJSON.FeatureCollection = { type: "FeatureCollection", features: [] };
-
-export interface ThemeOverlay {
-  geometry: GeoJSON.Geometry;
-  color: string;
-  visible: boolean;
-}
-
 // A raster registry layer the user has toggled on, resolved to whichever
 // year's asset is currently selected (lib/gis-registry.ts's rasterYears /
 // rasterAsset).
@@ -356,25 +348,20 @@ function addLayers(
       "circle-stroke-color": isDark() ? BACKGROUND_DARK : BACKGROUND_LIGHT,
     },
   });
+}
 
-  // Theme overlay: a stand-in for satellite/drone imagery a theme's filters
-  // would show, using whatever geometry the caller hands it (e.g. the hill
-  // boundary) tinted per-selection. Hidden until a theme sets it visible.
-  map.addSource("theme-overlay", { type: "geojson", data: EMPTY_FC });
-  map.addLayer({
-    id: "theme-overlay-fill",
-    type: "fill",
-    source: "theme-overlay",
-    layout: { visibility: "none" },
-    paint: { "fill-color": ["get", "color"], "fill-opacity": 0.45 },
-  });
-  map.addLayer({
-    id: "theme-overlay-outline",
-    type: "line",
-    source: "theme-overlay",
-    layout: { visibility: "none" },
-    paint: { "line-color": ["get", "color"], "line-width": 2, "line-dasharray": [2, 2] },
-  });
+// Allow-list filter: nothing draws until it is explicitly switched on, so an
+// empty visibility map must match no feature. Applied on every path that can
+// (re)create the vector layers, not just on toggle, or a freshly added layer
+// would render unfiltered.
+function applyVisibility(map: MapLibreMap, visibility: Record<number, boolean>) {
+  const visibleIds = Object.entries(visibility)
+    .filter(([, visible]) => visible)
+    .map(([id]) => Number(id));
+  const filter: FilterSpecification = ["in", ["get", "id"], ["literal", visibleIds]];
+  for (const layerId of ["polygons-fill", "polygons-outline", "lines-casing", "lines", "points"]) {
+    if (map.getLayer(layerId)) map.setFilter(layerId, filter);
+  }
 }
 
 function render(map: MapLibreMap, data: LayerCollection, fitOnce: { done: boolean }) {
@@ -408,19 +395,18 @@ export default function Map({
   visibility,
   onReady,
   onToggleLayers,
-  themeOverlay,
   rasterLayers,
 }: {
   data: LayerCollection;
   visibility: Record<number, boolean>;
   onReady?: (map: MapLibreMap) => void;
   onToggleLayers?: () => void;
-  themeOverlay?: ThemeOverlay | null;
   rasterLayers?: ActiveRasterLayer[];
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
   const dataRef = useRef(data);
+  const visibilityRef = useRef(visibility);
   const fitOnceRef = useRef({ done: false });
   const rasterLayersRef = useRef(rasterLayers);
   // globalThis.Map, not the local Map component this function is itself named after.
@@ -429,6 +415,10 @@ export default function Map({
   useEffect(() => {
     dataRef.current = data;
   }, [data]);
+
+  useEffect(() => {
+    visibilityRef.current = visibility;
+  }, [visibility]);
 
   useEffect(() => {
     rasterLayersRef.current = rasterLayers;
@@ -452,6 +442,7 @@ export default function Map({
 
     map.on("load", () => {
       render(map, dataRef.current, fitOnceRef.current);
+      applyVisibility(map, visibilityRef.current);
       attachPopups(map);
       syncRasterLayers(map, rasterLayersRef.current ?? [], appliedRasterRef.current);
       onReady?.(map);
@@ -474,31 +465,11 @@ export default function Map({
   // data updates: push into the already-running map without recreating it
   useEffect(() => {
     const map = mapRef.current;
-    if (map && map.isStyleLoaded()) render(map, data, fitOnceRef.current);
-  }, [data]);
-
-  // theme overlay: swap the mock satellite/drone tint in place, no refit
-  useEffect(() => {
-    const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
-    const source = map.getSource<GeoJSONSource>("theme-overlay");
-    if (!source) return;
-
-    const visible = Boolean(themeOverlay?.visible);
-    source.setData(
-      themeOverlay
-        ? {
-            type: "FeatureCollection",
-            features: [
-              { type: "Feature", properties: { color: themeOverlay.color }, geometry: themeOverlay.geometry },
-            ],
-          }
-        : EMPTY_FC,
-    );
-    for (const layerId of ["theme-overlay-fill", "theme-overlay-outline"]) {
-      map.setLayoutProperty(layerId, "visibility", visible ? "visible" : "none");
-    }
-  }, [themeOverlay]);
+    render(map, data, fitOnceRef.current);
+    applyVisibility(map, visibility);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data]);
 
   // raster overlays: add/remove/swap image sources as layers are toggled or
   // their selected year changes, without touching the vector sources.
@@ -512,15 +483,7 @@ export default function Map({
   useEffect(() => {
     const map = mapRef.current;
     if (!map || !map.isStyleLoaded()) return;
-    const hiddenIds = Object.entries(visibility)
-      .filter(([, visible]) => !visible)
-      .map(([id]) => Number(id));
-    const filter: FilterSpecification | null = hiddenIds.length
-      ? ["!", ["in", ["get", "id"], ["literal", hiddenIds]]]
-      : null;
-    for (const layerId of ["polygons-fill", "polygons-outline", "lines-casing", "lines", "points"]) {
-      if (map.getLayer(layerId)) map.setFilter(layerId, filter);
-    }
+    applyVisibility(map, visibility);
   }, [visibility]);
 
   return (

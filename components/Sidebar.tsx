@@ -1,6 +1,5 @@
 "use client";
 
-import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -10,8 +9,6 @@ import {
   Users,
   LogOut,
   LogIn,
-  PanelLeftClose,
-  PanelLeftOpen,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,16 +20,18 @@ const NAV_ITEMS = [
   { href: "/", label: "Layers", icon: Layers },
 ];
 
+// The sidebar has no collapse control: the layer sections are the primary way
+// into the dashboard, and a panel that can vanish behind a rail buries them.
+// It is simply always open on xl and up, and lives in the mobile sheet below
+// that breakpoint.
 function SidebarContent({
   user,
   onLoginClick,
   onLogoutClick,
-  onCollapse,
 }: {
   user: AuthUser | null;
   onLoginClick: () => void;
   onLogoutClick: () => void;
-  onCollapse?: () => void;
 }) {
   const pathname = usePathname();
 
@@ -48,16 +47,6 @@ function SidebarContent({
             Web GIS Dashboard
           </p>
         </div>
-        {onCollapse && (
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Collapse sidebar"
-            onClick={onCollapse}
-          >
-            <PanelLeftClose />
-          </Button>
-        )}
       </div>
 
       <nav className="flex flex-1 flex-col gap-1 p-2">
@@ -122,18 +111,14 @@ export function Sidebar({
   onLoginClick,
   onLogoutClick,
   variant = "floating",
-  onCollapse,
   className,
 }: {
   user: AuthUser | null;
   onLoginClick: () => void;
   onLogoutClick: () => void;
   variant?: "floating" | "embedded" | "combined";
-  onCollapse?: () => void;
   className?: string;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
-
   if (variant === "embedded") {
     return (
       <div className={cn("flex h-full flex-col bg-sidebar", className)}>
@@ -146,9 +131,9 @@ export function Sidebar({
     );
   }
 
-  // Content-only, no shadow/positioning/self-managed collapse — used as the
-  // top section of MapDashboard's combined sidebar+themes+layers panel,
-  // where the parent owns the single collapse toggle for the whole thing.
+  // Content-only, no shadow/positioning — used as the top section of
+  // MapDashboard's combined sidebar+themes+layers panel, where the parent owns
+  // the surrounding chrome.
   if (variant === "combined") {
     return (
       <div className={cn("flex shrink-0 flex-col", className)}>
@@ -156,24 +141,7 @@ export function Sidebar({
           user={user}
           onLoginClick={onLoginClick}
           onLogoutClick={onLogoutClick}
-          onCollapse={onCollapse}
         />
-      </div>
-    );
-  }
-
-  if (collapsed) {
-    return (
-      <div className={cn("hidden xl:block", className)}>
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full shadow-sm ring-1 ring-foreground/10"
-          aria-label="Expand sidebar"
-          onClick={() => setCollapsed(false)}
-        >
-          <PanelLeftOpen />
-        </Button>
       </div>
     );
   }
@@ -189,7 +157,6 @@ export function Sidebar({
         user={user}
         onLoginClick={onLoginClick}
         onLogoutClick={onLogoutClick}
-        onCollapse={() => setCollapsed(true)}
       />
     </div>
   );
