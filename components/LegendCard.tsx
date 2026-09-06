@@ -1,9 +1,5 @@
 "use client";
 
-import { useState } from "react";
-import { ListTree, ChevronDown } from "lucide-react";
-import { Card, CardHeader, CardTitle, CardAction, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LayerSwatch, type SwatchGeometryKind } from "@/components/LayerSwatch";
 import { legendFor } from "@/lib/legend-config";
@@ -41,7 +37,12 @@ export interface LegendRasterLayer {
   isPhotographic?: boolean;
 }
 
-export function LegendCard({
+/**
+ * Legend body — swatch rows for the switched-on vector layers, then a class
+ * list per switched-on raster theme. Card chrome (header, tabs, collapse)
+ * lives in components/MapInfoPanel.tsx, which is the only place this renders.
+ */
+export function LegendContent({
   layers,
   rasterLayers = [],
   className,
@@ -50,83 +51,72 @@ export function LegendCard({
   rasterLayers?: LegendRasterLayer[];
   className?: string;
 }) {
-  const [collapsed, setCollapsed] = useState(false);
   const rows = uniqueLayers(layers);
 
-  if (rows.length === 0 && rasterLayers.length === 0) return null;
+  if (rows.length === 0 && rasterLayers.length === 0) {
+    return (
+      <p className={cn("text-xs text-muted-foreground", className)}>
+        No layers switched on yet — turn one on to see its legend.
+      </p>
+    );
+  }
 
   return (
-    <Card className={className} size="sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <ListTree className="size-4 text-muted-foreground" strokeWidth={1.75} />
-          Legend
-        </CardTitle>
-        <CardAction>
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label={collapsed ? "Expand legend" : "Collapse legend"}
-            onClick={() => setCollapsed((c) => !c)}
-          >
-            <ChevronDown className={cn("transition-transform", collapsed && "-rotate-90")} />
-          </Button>
-        </CardAction>
-      </CardHeader>
-      {/* No max-height/scroll on the content: every entry stays visible, since
-          a scrollbar inside the legend is easy to miss. The caller caps the
-          card against the map area as an off-screen safety. */}
-      {!collapsed && (
-        <CardContent className="flex flex-col gap-3">
-          {rows.length > 0 && (
-            <div className="flex flex-col gap-1.5">
-              {rows.map((feature) => (
-                <div key={feature.properties.id} className="flex items-center gap-2 text-sm">
-                  <LayerSwatch color={feature.properties.color} geometryKind={geometryKindOf(feature)} />
-                  <span>{feature.properties.name}</span>
-                </div>
-              ))}
+    <div className={cn("flex flex-col gap-3", className)}>
+      {rows.length > 0 && (
+        <div className="flex flex-col gap-1.5">
+          {rows.map((feature) => (
+            <div key={feature.properties.id} className="flex items-center gap-2 text-sm">
+              <LayerSwatch color={feature.properties.color} geometryKind={geometryKindOf(feature)} />
+              <span>{feature.properties.name}</span>
             </div>
-          )}
-
-          {rasterLayers.map((raster) => {
-            const legend = legendFor(raster.id);
-            return (
-              <div key={raster.id} className="flex flex-col gap-1">
-                <span className="text-xs font-medium text-muted-foreground">{raster.name}</span>
-                {raster.isPhotographic ? (
-                  <span className="text-xs text-muted-foreground/70 italic">Photographic image — no class legend</span>
-                ) : (
-                  legend && (
-                    <div className="flex flex-col gap-1">
-                      {/* Long class lists (e.g. Vegetation Change's 25-way
-                          transition matrix) go two-up with their compact
-                          labels, so the legend still fits without scrolling. */}
-                      <div className={cn("gap-x-2 gap-y-1", isLong(legend) ? "grid grid-cols-2" : "flex flex-col")}>
-                        {legend.classes.map((cls) => (
-                          <div key={cls.value} className="flex items-center gap-1.5 text-xs">
-                            <span
-                              className="size-2.5 shrink-0 rounded-full"
-                              style={{ backgroundColor: cls.color }}
-                              aria-hidden
-                            />
-                            <span className="truncate" title={cls.label}>
-                              {isLong(legend) ? (cls.shortLabel ?? cls.label) : cls.label}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      {legend.note && (
-                        <span className="text-[10px] text-muted-foreground/70 italic">{legend.note}</span>
-                      )}
-                    </div>
-                  )
-                )}
-              </div>
-            );
-          })}
-        </CardContent>
+          ))}
+        </div>
       )}
-    </Card>
+
+      {rasterLayers.map((raster) => {
+        const legend = legendFor(raster.id);
+        return (
+          <div key={raster.id} className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-muted-foreground">{raster.name}</span>
+            {raster.isPhotographic ? (
+              <span className="text-xs text-muted-foreground/70 italic">
+                Photographic image — no class legend
+              </span>
+            ) : (
+              legend && (
+                <div className="flex flex-col gap-1">
+                  {/* Long class lists (e.g. Vegetation Change's 25-way
+                      transition matrix) go two-up with their compact
+                      labels, so the legend still fits without scrolling. */}
+                  <div
+                    className={cn(
+                      "gap-x-2 gap-y-1",
+                      isLong(legend) ? "grid grid-cols-2" : "flex flex-col",
+                    )}
+                  >
+                    {legend.classes.map((cls) => (
+                      <div key={cls.value} className="flex items-center gap-1.5 text-xs">
+                        <span
+                          className="size-2.5 shrink-0 rounded-full"
+                          style={{ backgroundColor: cls.color }}
+                          aria-hidden
+                        />
+                        <span className="truncate" title={cls.label}>
+                          {isLong(legend) ? (cls.shortLabel ?? cls.label) : cls.label}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                  {legend.note && (
+                    <span className="text-[10px] text-muted-foreground/70 italic">{legend.note}</span>
+                  )}
+                </div>
+              )
+            )}
+          </div>
+        );
+      })}
+    </div>
   );
 }
