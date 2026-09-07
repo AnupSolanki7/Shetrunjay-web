@@ -262,7 +262,7 @@ export function MapDashboard() {
         {/* Header mirrors this width for its brand block, so the search bar
             above lines up with the map column — keep the two in step. */}
         <aside className="hidden w-[18%] shrink-0 flex-col border-r border-border bg-sidebar xl:flex">
-          <div className="flex min-h-0 flex-1 flex-col divide-y divide-border overflow-y-auto scrollbar-thin">
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-thin">
             <Sidebar variant="combined" user={auth.user} />
             <div>{sections}</div>
           </div>
@@ -305,7 +305,7 @@ export function MapDashboard() {
       </nav>
 
       <Sheet open={mobileSheet === "menu"} onOpenChange={(o) => setMobileSheet(o ? "menu" : null)}>
-        <SheetContent side="left" className="flex w-72 flex-col divide-y divide-border overflow-y-auto p-0 scrollbar-thin">
+        <SheetContent side="left" className="flex w-72 flex-col overflow-y-auto p-0 pt-12 scrollbar-thin">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <Sidebar variant="combined" user={auth.user} />
           <div>{sections}</div>

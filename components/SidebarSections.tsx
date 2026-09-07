@@ -32,17 +32,13 @@ import {
   Footprints,
   Milestone,
   Mountain,
-  Camera,
   Image,
   Boxes,
   TrendingDown,
-  TrendingUp,
-  Navigation,
   Waypoints,
   Construction,
   CircleDashed,
   Layers,
-  Radar,
   type LucideIcon,
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
@@ -70,7 +66,9 @@ interface SectionDef {
    * layer  — the section *is* one layer: a header switch only, plus a year
    *          dropdown when that layer has multiple years.
    * single — several full-coverage rasters, so one layer at a time within
-   *          the section.
+   *          the section. No section uses this at present (the LiDAR / Drone
+   *          group that did has been removed), but the exclusivity it drives
+   *          is still wired up for the next multi-raster group.
    * multi  — thin reference geometry meant to be combined.
    */
   mode: "layer" | "single" | "multi";
@@ -138,19 +136,6 @@ export const SECTIONS: SectionDef[] = [
       { label: "Forest", icon: TreePine, layerId: "forest" },
       { label: "SOI Toposheets", icon: Compass },
       { label: "Study Area", icon: Focus, layerId: "study-area" },
-    ],
-  },
-  {
-    label: "LiDAR / Drone",
-    icon: Radar,
-    mode: "single",
-    items: [
-      { label: "Ortho (Orthomosaic)", icon: Camera, layerId: "ortho" },
-      { label: "DSM", icon: Mountain, layerId: "dsm" },
-      { label: "DTM", icon: Mountain, layerId: "dtm" },
-      { label: "CHM", icon: Trees, layerId: "chm" },
-      { label: "Slope", icon: TrendingUp, layerId: "slope" },
-      { label: "Aspect", icon: Navigation, layerId: "aspect" },
     ],
   },
   {
