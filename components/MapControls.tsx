@@ -1,27 +1,21 @@
 "use client";
 
 import type { RefObject } from "react";
-import { Plus, Minus, House, LocateFixed, Layers } from "lucide-react";
+import { Plus, Minus, House } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { Map as MapLibreMap } from "maplibre-gl";
 
+// Zoom in, zoom out and reset-to-extent only. "Locate me" pointed a
+// geolocation prompt at a study area a user is almost never standing in, and
+// the layers button duplicated the header's menu toggle, which is on screen
+// at every breakpoint the map controls are.
 export function MapControls({
   mapRef,
   fitBounds,
-  onToggleLayers,
 }: {
   mapRef: RefObject<MapLibreMap | null>;
   fitBounds: () => void;
-  onToggleLayers?: () => void;
 }) {
-  function locate() {
-    const map = mapRef.current;
-    if (!map || !navigator.geolocation) return;
-    navigator.geolocation.getCurrentPosition(({ coords }) => {
-      map.flyTo({ center: [coords.longitude, coords.latitude], zoom: 13 });
-    });
-  }
-
   return (
     <div
       data-tour="map-controls"
@@ -46,19 +40,6 @@ export function MapControls({
       <Button variant="ghost" size="icon-sm" aria-label="Reset view" onClick={fitBounds}>
         <House />
       </Button>
-      <Button variant="ghost" size="icon-sm" aria-label="Locate me" onClick={locate}>
-        <LocateFixed />
-      </Button>
-      {onToggleLayers && (
-        <Button
-          variant="ghost"
-          size="icon-sm"
-          aria-label="Toggle layers panel"
-          onClick={onToggleLayers}
-        >
-          <Layers />
-        </Button>
-      )}
     </div>
   );
 }

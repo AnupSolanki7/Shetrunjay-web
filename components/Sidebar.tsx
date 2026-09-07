@@ -2,37 +2,23 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Mountain,
-  LayoutDashboard,
-  Layers,
-  Users,
-  LogOut,
-  LogIn,
-} from "lucide-react";
+import { Mountain, Users } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import type { AuthUser } from "@/lib/auth";
-
-const NAV_ITEMS = [
-  { href: "/", label: "Dashboard", icon: LayoutDashboard },
-  { href: "/", label: "Layers", icon: Layers },
-];
 
 // The sidebar has no collapse control: the layer sections are the primary way
 // into the dashboard, and a panel that can vanish behind a rail buries them.
 // It is simply always open on xl and up, and lives in the mobile sheet below
 // that breakpoint.
-function SidebarContent({
-  user,
-  onLoginClick,
-  onLogoutClick,
-}: {
-  user: AuthUser | null;
-  onLoginClick: () => void;
-  onLogoutClick: () => void;
-}) {
+//
+// It also carries no page navigation and no auth control. The dashboard is the
+// only public page and the layer sections below are its navigation, so
+// "Dashboard" and "Layers" links pointed at the page you were already on;
+// login/logout lives in the header's account menu, which is present on every
+// page and on every breakpoint. What is left is the wordmark plus the one link
+// that does lead somewhere else — the admin user-management page.
+function SidebarContent({ user }: { user: AuthUser | null }) {
   const pathname = usePathname();
 
   return (
@@ -49,22 +35,8 @@ function SidebarContent({
         </div>
       </div>
 
-      <nav className="flex flex-1 flex-col gap-1 p-2">
-        {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
-          <Link
-            key={label}
-            href={href}
-            className={cn(
-              "flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-sidebar-accent",
-              pathname === href && label === "Dashboard" && "bg-sidebar-accent",
-            )}
-          >
-            <Icon className="size-4" strokeWidth={1.75} />
-            {label}
-          </Link>
-        ))}
-
-        {user?.role === "admin" && (
+      {user?.role === "admin" && (
+        <nav className="flex flex-col gap-1 p-2 pt-0">
           <Link
             href="/admin/users"
             className={cn(
@@ -78,55 +50,25 @@ function SidebarContent({
             </span>
             <Badge className="bg-accent text-accent-foreground">Admin</Badge>
           </Link>
-        )}
-      </nav>
-
-      <div className="border-t border-sidebar-border p-2">
-        {user ? (
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2.5 px-3 text-destructive hover:text-destructive"
-            onClick={onLogoutClick}
-          >
-            <LogOut className="size-4" strokeWidth={1.75} />
-            Logout
-          </Button>
-        ) : (
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-2.5 px-3"
-            onClick={onLoginClick}
-          >
-            <LogIn className="size-4" strokeWidth={1.75} />
-            Login
-          </Button>
-        )}
-      </div>
+        </nav>
+      )}
     </>
   );
 }
 
 export function Sidebar({
   user,
-  onLoginClick,
-  onLogoutClick,
   variant = "floating",
   className,
 }: {
   user: AuthUser | null;
-  onLoginClick: () => void;
-  onLogoutClick: () => void;
   variant?: "floating" | "embedded" | "combined";
   className?: string;
 }) {
   if (variant === "embedded") {
     return (
       <div className={cn("flex h-full flex-col bg-sidebar", className)}>
-        <SidebarContent
-          user={user}
-          onLoginClick={onLoginClick}
-          onLogoutClick={onLogoutClick}
-        />
+        <SidebarContent user={user} />
       </div>
     );
   }
@@ -137,11 +79,7 @@ export function Sidebar({
   if (variant === "combined") {
     return (
       <div className={cn("flex shrink-0 flex-col", className)}>
-        <SidebarContent
-          user={user}
-          onLoginClick={onLoginClick}
-          onLogoutClick={onLogoutClick}
-        />
+        <SidebarContent user={user} />
       </div>
     );
   }
@@ -153,11 +91,7 @@ export function Sidebar({
         className,
       )}
     >
-      <SidebarContent
-        user={user}
-        onLoginClick={onLoginClick}
-        onLogoutClick={onLogoutClick}
-      />
+      <SidebarContent user={user} />
     </div>
   );
 }
