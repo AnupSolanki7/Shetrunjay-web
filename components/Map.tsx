@@ -556,14 +556,12 @@ export default function Map({
   data,
   visibility,
   onReady,
-  onToggleLayers,
   rasterLayers,
   animatedLayerIds,
 }: {
   data: LayerCollection;
   visibility: Record<number, boolean>;
   onReady?: (map: MapLibreMap) => void;
-  onToggleLayers?: () => void;
   rasterLayers?: ActiveRasterLayer[];
   /**
    * Numeric ids whose geometry gets the looping dash animation — the Base
@@ -717,7 +715,6 @@ export default function Map({
           const bounds = dataRef.current.features.map(boundsOfFeature).find(Boolean);
           if (map && bounds) map.fitBounds(bounds, { padding: 40 });
         }}
-        onToggleLayers={onToggleLayers}
       />
     </div>
   );

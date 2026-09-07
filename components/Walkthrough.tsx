@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** Bumped when the steps change enough that returning users should see it again. */
-const SEEN_KEY = "shetrunjay.walkthrough.v1";
+const SEEN_KEY = "shetrunjay.walkthrough.v2";
 
 interface Step {
   /** Value of the data-tour attribute to spotlight. Omitted = centred card. */
@@ -25,17 +25,17 @@ const STEPS: Step[] = [
   {
     target: "sections",
     title: "Themes and layers",
-    body: "Every layer lives in a section — Theme, Forest Cover, Watershed Analysis, Base Layers and so on. Switch a section on first; only that section's layers draw at a time, so the map never turns into a pile of overlapping imagery.",
+    body: "Every layer lives in a section — Forest Cover, Green Cover, Watershed Analysis, Base Layers and so on. Switch a section on first; only that section's layers draw at a time, so the map never turns into a pile of overlapping imagery.",
   },
   {
     target: "section-theme",
     title: "Switch a section on",
-    body: "This switch opens the section. Rows marked “Pending” have no data delivered yet. Multi-year themes like Forest Cover add a Year dropdown once they are on.",
+    body: "This switch turns the section on. A section marked “Pending” has no data delivered yet. Multi-year themes like this one add a Year dropdown once they are on; the grouped sections further down list their layers with a switch each.",
   },
   {
     target: "search",
     title: "Find a layer fast",
-    body: "With 40-odd layers, scrolling is slow. Click search, type part of a layer's name, and pick it — the dashboard opens the right section and switches that layer on for you.",
+    body: "With 40-odd layers, scrolling is slow. Type part of a layer's name here and pick it — the dashboard opens the right section and switches that layer on for you.",
   },
   {
     target: "info-panel",
@@ -45,12 +45,11 @@ const STEPS: Step[] = [
   {
     target: "map-controls",
     title: "Map controls",
-    body: "Zoom, reset the view back to the data's extent, or jump to your own location. Clicking any feature on the map opens its attribute popup.",
+    body: "Zoom in and out, or reset the view back to the data's extent. Clicking any feature on the map opens its attribute popup.",
   },
   {
-    target: "account",
     title: "Sign in for more layers",
-    body: "Some layers are restricted by role and simply aren't listed until you sign in. Admins also get the user-management page from the sidebar.",
+    body: "Some layers are restricted by role and simply aren't listed until you sign in. Sign in from the /login page; admins also get the user-management page from the sidebar.",
   },
 ];
 

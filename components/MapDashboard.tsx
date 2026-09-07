@@ -42,7 +42,7 @@ type MobileSheet = "menu" | "legend" | null;
 //
 // Both are networks rather than thematic surfaces, which is what makes the
 // motion worth having: it traces where a road or a stream actually runs, and
-// tells this connective geometry apart from the Theme/LiDAR rasters at a
+// tells this connective geometry apart from the theme/LiDAR rasters at a
 // glance. Streams in particular read as direction of flow. The sections are
 // an accordion, so at most one of these is ever animating at a time.
 const ANIMATED_SECTIONS = ["Base Layers", "Watershed Analysis"];
@@ -128,8 +128,8 @@ export function MapDashboard() {
       if (!on) return { ...v, [section]: {} };
       const def = SECTIONS.find((s) => s.label === section);
       const entry = def?.layerId ? registryEntry(def.layerId) : undefined;
-      // A one-layer section (Forest Cover) has nothing to pick, so turning it
-      // on shows its layer straight away.
+      // A single-layer section (Forest Cover and every theme) has nothing to
+      // pick, so turning it on shows its layer straight away.
       if (entry) return { ...v, [section]: { [entry.numericId]: true } };
       return { ...v, [section]: v[section] ?? {} };
     });
@@ -253,17 +253,17 @@ export function MapDashboard() {
         onLoginClick={auth.openLogin}
         onLogoutClick={auth.logout}
         onHelpClick={() => setTourOpen(true)}
+        search={
+          <LayerSearch role={role} visibility={visibility} onSelect={revealLayer} />
+        }
       />
 
       <div className="flex min-h-0 flex-1">
+        {/* Header mirrors this width for its brand block, so the search bar
+            above lines up with the map column — keep the two in step. */}
         <aside className="hidden w-[18%] shrink-0 flex-col border-r border-border bg-sidebar xl:flex">
           <div className="flex min-h-0 flex-1 flex-col divide-y divide-border overflow-y-auto scrollbar-thin">
-            <Sidebar
-              variant="combined"
-              user={auth.user}
-              onLoginClick={auth.openLogin}
-              onLogoutClick={auth.logout}
-            />
+            <Sidebar variant="combined" user={auth.user} />
             <div>{sections}</div>
           </div>
           <p className="shrink-0 border-t border-sidebar-border px-4 py-3 text-xs text-muted-foreground">
@@ -276,20 +276,10 @@ export function MapDashboard() {
             <Map
               data={layers ?? EMPTY}
               visibility={visibility}
-              onToggleLayers={() => setMobileSheet((s) => (s === "menu" ? null : "menu"))}
               rasterLayers={activeRasterLayers}
               animatedLayerIds={ANIMATED_LAYER_IDS}
             />
           </div>
-
-          {/* Top-left of the map is the one free corner: MapControls sits
-              bottom-left, the info panel bottom-right, attribution under it. */}
-          <LayerSearch
-            role={role}
-            visibility={visibility}
-            onSelect={revealLayer}
-            className="absolute top-4 left-4 z-10"
-          />
 
           {infoPanel("absolute right-4 bottom-4 hidden max-h-[calc(100%-2rem)] w-72 xl:flex")}
         </div>
@@ -317,15 +307,7 @@ export function MapDashboard() {
       <Sheet open={mobileSheet === "menu"} onOpenChange={(o) => setMobileSheet(o ? "menu" : null)}>
         <SheetContent side="left" className="flex w-72 flex-col divide-y divide-border overflow-y-auto p-0 scrollbar-thin">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <Sidebar
-            variant="combined"
-            user={auth.user}
-            onLoginClick={() => {
-              setMobileSheet(null);
-              auth.openLogin();
-            }}
-            onLogoutClick={auth.logout}
-          />
+          <Sidebar variant="combined" user={auth.user} />
           <div>{sections}</div>
         </SheetContent>
       </Sheet>

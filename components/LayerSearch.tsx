@@ -20,13 +20,14 @@ interface SearchEntry {
 
 // Flattens the sidebar's section tree into one searchable list. Rows with no
 // layerId (SOI Toposheets, the decorative Fauna/Outputs children) are skipped
-// — there is nothing to switch on for them. Year-mode sections (Forest Cover)
-// contribute the section itself, since the section *is* the layer there.
+// — there is nothing to switch on for them. Single-layer sections (Forest
+// Cover and every theme) contribute the section itself, since the section *is*
+// the layer there.
 function buildIndex(role: Role | null): SearchEntry[] {
   const index: SearchEntry[] = [];
 
   for (const section of SECTIONS) {
-    if (section.mode === "year" && section.layerId) {
+    if (section.mode === "layer" && section.layerId) {
       const entry = registryEntry(section.layerId);
       if (entry && isVisibleToRole(entry, role)) {
         index.push({
@@ -84,9 +85,12 @@ function search(index: SearchEntry[], query: string): SearchEntry[] {
 }
 
 /**
- * Floating layer search over the map. Collapsed it is a single icon button;
- * clicking it expands into an input with a result list, and picking a result
- * switches that layer's section on and turns the layer itself on.
+ * Layer search for the header bar. A permanently visible input — typing opens
+ * a result dropdown anchored under it, and picking a result switches that
+ * layer's section on and turns the layer itself on.
+ *
+ * The dropdown is absolutely positioned rather than sitting in flow, so a long
+ * result list overhangs the map instead of growing the header.
  */
 export function LayerSearch({
   role,
@@ -100,53 +104,52 @@ export function LayerSearch({
   onSelect: (section: string, entry: LayerRegistryEntry) => void;
   className?: string;
 }) {
-  const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
+  // Whether the result list is showing. Tracked separately from `query` so a
+  // click outside can dismiss the list without discarding what was typed.
+  const [open, setOpen] = useState(false);
   const [highlighted, setHighlighted] = useState(0);
   const inputRef = useRef<HTMLInputElement>(null);
   const rootRef = useRef<HTMLDivElement>(null);
 
   const index = useMemo(() => buildIndex(role), [role]);
   const results = useMemo(() => search(index, query), [index, query]);
+  const showResults = open && query.trim() !== "";
 
   // Clamp rather than reset: the list shrinks as the query narrows, and an
   // index left past the end would highlight nothing.
   const activeIndex = Math.min(highlighted, Math.max(results.length - 1, 0));
 
+  // Dismiss on an outside click, so the list doesn't hang over the map after
+  // the user has moved on.
   useEffect(() => {
-    if (open) inputRef.current?.focus();
-  }, [open]);
-
-  // Collapse on an outside click, so the pill doesn't sit expanded over the
-  // map after the user has moved on.
-  useEffect(() => {
-    if (!open) return;
+    if (!showResults) return;
     function onPointerDown(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) close();
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
     }
     document.addEventListener("pointerdown", onPointerDown);
     return () => document.removeEventListener("pointerdown", onPointerDown);
-  }, [open]);
+  }, [showResults]);
 
-  function close() {
-    setOpen(false);
+  function reset() {
     setQuery("");
+    setOpen(false);
     setHighlighted(0);
   }
 
   function choose(result: SearchEntry) {
     if (result.pending) return;
     onSelect(result.section, result.entry);
-    close();
+    reset();
   }
 
   function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
     if (event.key === "Escape") {
       event.preventDefault();
-      close();
+      reset();
       return;
     }
-    if (results.length === 0) return;
+    if (!showResults || results.length === 0) return;
     if (event.key === "ArrowDown") {
       event.preventDefault();
       setHighlighted((i) => (Math.min(i, results.length - 1) + 1) % results.length);
@@ -159,99 +162,94 @@ export function LayerSearch({
     }
   }
 
-  if (!open) {
-    return (
-      <div className={className} data-tour="search">
-        <Button
-          variant="secondary"
-          size="icon"
-          className="rounded-full shadow-sm ring-1 ring-foreground/10"
-          aria-label="Search layers"
-          onClick={() => setOpen(true)}
-        >
-          <Search />
-        </Button>
-      </div>
-    );
-  }
-
   return (
-    <div ref={rootRef} className={cn("w-72", className)} data-tour="search">
-      <div className="overflow-hidden rounded-xl bg-card shadow-sm ring-1 ring-foreground/10">
-        <div className="flex items-center gap-2 px-3">
-          <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
-          <input
-            ref={inputRef}
-            value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setHighlighted(0);
+    <div ref={rootRef} className={cn("relative", className)} data-tour="search">
+      <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+        <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            setHighlighted(0);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Search layers…"
+          aria-label="Search layers"
+          role="combobox"
+          aria-expanded={showResults && results.length > 0}
+          aria-controls="layer-search-results"
+          className="h-full min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+        />
+        {query !== "" && (
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className="shrink-0"
+            aria-label="Clear search"
+            onClick={() => {
+              reset();
+              inputRef.current?.focus();
             }}
-            onKeyDown={onKeyDown}
-            placeholder="Search layers…"
-            aria-label="Search layers"
-            role="combobox"
-            aria-expanded={results.length > 0}
-            aria-controls="layer-search-results"
-            className="h-10 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
-          />
-          <Button variant="ghost" size="icon-xs" aria-label="Close search" onClick={close}>
+          >
             <X />
           </Button>
-        </div>
-
-        {query.trim() !== "" && (
-          <div
-            id="layer-search-results"
-            role="listbox"
-            className="max-h-72 overflow-y-auto border-t border-border scrollbar-thin"
-          >
-            {results.length === 0 ? (
-              <p className="px-3 py-3 text-xs text-muted-foreground">
-                No layer matches “{query.trim()}”.
-              </p>
-            ) : (
-              results.map((result, i) => {
-                const on = Boolean(visibility[result.entry.numericId]);
-                return (
-                  <button
-                    key={`${result.section}:${result.entry.id}`}
-                    type="button"
-                    role="option"
-                    aria-selected={i === activeIndex}
-                    aria-disabled={result.pending}
-                    onMouseEnter={() => setHighlighted(i)}
-                    onClick={() => choose(result)}
-                    className={cn(
-                      "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
-                      i === activeIndex && "bg-muted",
-                      result.pending && "cursor-not-allowed opacity-60",
-                    )}
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-sm">{result.label}</span>
-                      <span className="block truncate text-xs text-muted-foreground">
-                        {result.section}
-                      </span>
-                    </span>
-                    {result.pending ? (
-                      <Badge variant="outline" className="shrink-0 text-[10px] text-muted-foreground">
-                        Pending
-                      </Badge>
-                    ) : (
-                      on && (
-                        <Badge className="shrink-0 bg-accent text-[10px] text-accent-foreground">
-                          On
-                        </Badge>
-                      )
-                    )}
-                  </button>
-                );
-              })
-            )}
-          </div>
         )}
       </div>
+
+      {showResults && (
+        <div
+          id="layer-search-results"
+          role="listbox"
+          className="absolute top-full left-0 z-50 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-md scrollbar-thin"
+        >
+          {results.length === 0 ? (
+            <p className="px-3 py-3 text-xs text-muted-foreground">
+              No layer matches “{query.trim()}”.
+            </p>
+          ) : (
+            results.map((result, i) => {
+              const on = Boolean(visibility[result.entry.numericId]);
+              return (
+                <button
+                  key={`${result.section}:${result.entry.id}`}
+                  type="button"
+                  role="option"
+                  aria-selected={i === activeIndex}
+                  aria-disabled={result.pending}
+                  onMouseEnter={() => setHighlighted(i)}
+                  onClick={() => choose(result)}
+                  className={cn(
+                    "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
+                    i === activeIndex && "bg-muted",
+                    result.pending && "cursor-not-allowed opacity-60",
+                  )}
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm">{result.label}</span>
+                    <span className="block truncate text-xs text-muted-foreground">
+                      {result.section}
+                    </span>
+                  </span>
+                  {result.pending ? (
+                    <Badge variant="outline" className="shrink-0 text-[10px] text-muted-foreground">
+                      Pending
+                    </Badge>
+                  ) : (
+                    on && (
+                      <Badge className="shrink-0 bg-accent text-[10px] text-accent-foreground">
+                        On
+                      </Badge>
+                    )
+                  )}
+                </button>
+              );
+            })
+          )}
+        </div>
+      )}
     </div>
   );
 }
