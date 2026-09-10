@@ -264,15 +264,15 @@ export function MapDashboard() {
         <aside className="hidden w-[18%] shrink-0 flex-col border-r border-border bg-sidebar xl:flex">
           <div className="flex min-h-0 flex-1 flex-col overflow-y-auto scrollbar-thin">
             <Sidebar variant="combined" user={auth.user} />
-            <div>{sections}</div>
+            <div className="flex-1 bg-linear-to-b from-panel to-panel-deep">{sections}</div>
           </div>
-          <p className="shrink-0 border-t border-sidebar-border px-4 py-3 text-xs text-muted-foreground">
+          <p className="shrink-0 border-t border-border/60 bg-panel-deep px-4 py-2.5 text-center text-[11px] tracking-wide text-muted-foreground">
             © Shetrunjay Hills {new Date().getFullYear()}
           </p>
         </aside>
 
         <div className="relative min-w-0 flex-1 p-4">
-          <div className="relative size-full overflow-hidden rounded-2xl border border-border">
+          <div className="relative size-full overflow-hidden rounded-2xl border border-border shadow-e3">
             <Map
               data={layers ?? EMPTY}
               visibility={visibility}
@@ -308,7 +308,7 @@ export function MapDashboard() {
         <SheetContent side="left" className="flex w-72 flex-col overflow-y-auto p-0 pt-12 scrollbar-thin">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
           <Sidebar variant="combined" user={auth.user} />
-          <div>{sections}</div>
+          <div className="flex-1 bg-linear-to-b from-panel to-panel-deep">{sections}</div>
         </SheetContent>
       </Sheet>
 

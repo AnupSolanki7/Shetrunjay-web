@@ -23,6 +23,15 @@ const POINT_TYPES = new Set(["Point", "MultiPoint"]);
 const BACKGROUND_LIGHT = "#EDEDE8";
 const BACKGROUND_DARK = "#0E100F";
 
+// Stroke widths. A flow overlay MUST be exactly as wide as the base layer it
+// animates over: narrower leaves a sliver of layer colour down each side of
+// every gap, wider paints over the neighbouring geometry. They were five
+// loose numbers held together by a comment; as constants the pairing is
+// structural, so thinning a line cannot silently break its dashes.
+const LINE_WIDTH = 1;
+const LINE_CASING_WIDTH = 2;
+const OUTLINE_WIDTH = 0.75;
+
 // A raster registry layer the user has toggled on, resolved to whichever
 // year's asset is currently selected (lib/gis-registry.ts's rasterYears /
 // rasterAsset).
@@ -357,7 +366,7 @@ function addLayers(map: MapLibreMap) {
     id: "polygons-outline",
     type: "line",
     source: "polygons",
-    paint: { "line-color": ["get", "color"], "line-width": 2 },
+    paint: { "line-color": ["get", "color"], "line-width": OUTLINE_WIDTH },
   });
   // Flow overlay: surface-coloured dashes travelling along the boundary the
   // layer above already drew in its own colour, so what animates reads as
@@ -369,7 +378,7 @@ function addLayers(map: MapLibreMap) {
     source: "polygons",
     paint: {
       "line-color": surfaceColor(),
-      "line-width": 2,
+      "line-width": OUTLINE_WIDTH,
       "line-dasharray": DASH_SEQUENCE[0],
     },
   });
@@ -381,14 +390,17 @@ function addLayers(map: MapLibreMap) {
     type: "line",
     source: "lines",
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": isDark() ? BACKGROUND_DARK : BACKGROUND_LIGHT, "line-width": 5 },
+    paint: {
+      "line-color": isDark() ? BACKGROUND_DARK : BACKGROUND_LIGHT,
+      "line-width": LINE_CASING_WIDTH,
+    },
   });
   map.addLayer({
     id: "lines",
     type: "line",
     source: "lines",
     layout: { "line-cap": "round", "line-join": "round" },
-    paint: { "line-color": ["get", "color"], "line-width": 3 },
+    paint: { "line-color": ["get", "color"], "line-width": LINE_WIDTH },
   });
   map.addLayer({
     id: "lines-flow",
@@ -398,10 +410,8 @@ function addLayers(map: MapLibreMap) {
     // each other and the flow stops reading as movement.
     layout: { "line-cap": "butt", "line-join": "round" },
     paint: {
-      // Same width as "lines": a narrower dash would leave a sliver of layer
-      // colour down each side of the gap instead of a clean break.
       "line-color": surfaceColor(),
-      "line-width": 3,
+      "line-width": LINE_WIDTH,
       "line-dasharray": DASH_SEQUENCE[0],
     },
   });
