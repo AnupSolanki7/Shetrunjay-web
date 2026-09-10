@@ -50,7 +50,15 @@ export function Header({
   search?: React.ReactNode;
 }) {
   return (
-    <header className="relative z-30 flex items-center gap-2 border-b border-border bg-card p-3 xl:gap-0 xl:py-3 xl:pr-3 xl:pl-0">
+    <header className="relative z-30 flex items-center gap-2 border-b border-border bg-linear-to-b from-card to-panel/70 p-3 shadow-e1 xl:gap-0 xl:py-3 xl:pr-3 xl:pl-0">
+      {/* Brand rule along the bottom edge — the one deliberate flash of gold
+          in the chrome, fading out to the right so it frames rather than
+          underlines. */}
+      <span
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-linear-to-r from-primary/70 via-primary/25 to-transparent"
+      />
+
       <Button
         variant="ghost"
         size="icon"
@@ -65,14 +73,16 @@ export function Header({
           MapDashboard), so whatever follows it in the bar lines up with the
           map column that starts below it. Keep the two widths in step. */}
       <div className="flex min-w-0 shrink-0 items-center gap-2 xl:w-[18%] xl:px-4">
-        <Mountain className="size-6 shrink-0 text-primary" strokeWidth={1.75} />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/30 to-primary/10 shadow-e1 ring-1 ring-primary/30">
+          <Mountain className="size-5 text-primary" strokeWidth={2} />
+        </span>
         {/* Dropped below sm so the search bar has room on a phone; the mobile
             navigation sheet carries the wordmark in full. */}
         <div className="hidden min-w-0 sm:block">
-          <p className="truncate text-sm font-semibold leading-tight">
+          <p className="truncate text-sm font-semibold tracking-tight leading-tight">
             Shetrunjay Hills
           </p>
-          <p className="truncate text-xs leading-tight text-muted-foreground">
+          <p className="truncate text-[11px] tracking-wide leading-tight text-muted-foreground">
             Web GIS Dashboard
           </p>
         </div>
@@ -92,6 +102,7 @@ export function Header({
           <Button
             variant="ghost"
             size="icon"
+            className="rounded-full border border-border/70 bg-card text-muted-foreground shadow-e1 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
             aria-label="Replay dashboard walkthrough"
             onClick={onHelpClick}
           >

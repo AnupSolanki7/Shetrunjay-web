@@ -164,8 +164,11 @@ export function LayerSearch({
 
   return (
     <div ref={rootRef} className={cn("relative", className)} data-tour="search">
-      <div className="flex h-8 items-center gap-2 rounded-lg border border-input bg-background px-2.5 transition-[color,box-shadow] focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
-        <Search className="size-4 shrink-0 text-muted-foreground" strokeWidth={1.75} />
+      <div className="group/search flex h-9 items-center gap-2 rounded-full border border-border/70 bg-card px-3 shadow-e1 transition-[color,box-shadow,background-color] hover:border-border focus-within:border-primary/50 focus-within:bg-card focus-within:ring-[3px] focus-within:ring-primary/20">
+        <Search
+          className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within/search:text-primary"
+          strokeWidth={2}
+        />
         <input
           ref={inputRef}
           value={query}
@@ -203,7 +206,7 @@ export function LayerSearch({
         <div
           id="layer-search-results"
           role="listbox"
-          className="absolute top-full left-0 z-50 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-md scrollbar-thin"
+          className="absolute top-full left-0 z-50 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-e3 scrollbar-thin"
         >
           {results.length === 0 ? (
             <p className="px-3 py-3 text-xs text-muted-foreground">
@@ -223,7 +226,7 @@ export function LayerSearch({
                   onClick={() => choose(result)}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
-                    i === activeIndex && "bg-muted",
+                    i === activeIndex && "bg-primary/10",
                     result.pending && "cursor-not-allowed opacity-60",
                   )}
                 >

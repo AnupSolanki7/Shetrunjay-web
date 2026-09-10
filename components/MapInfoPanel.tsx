@@ -35,7 +35,7 @@ export function MapInfoPanel({
   const [collapsed, setCollapsed] = useState(false);
 
   return (
-    <Card className={className} size="sm" data-tour="info-panel">
+    <Card className={cn("shadow-e3", className)} size="sm" data-tour="info-panel">
       <Tabs defaultValue="legend" className="min-h-0 gap-(--card-spacing)">
         <div className="flex shrink-0 items-center gap-2 px-(--card-spacing)">
           <TabsList className="min-w-0 flex-1">

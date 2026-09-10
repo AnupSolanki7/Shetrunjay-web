@@ -45,6 +45,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { registryEntry, isVisibleToRole, type LayerRegistryEntry } from "@/lib/gis-registry";
+import { colorForLayer } from "@/lib/layer-style";
+import { cn } from "@/lib/utils";
 import type { Role } from "@/lib/auth";
 
 type DecorativeItem = { label: string; icon: LucideIcon };
@@ -58,10 +60,92 @@ interface SectionItem {
   children?: DecorativeItem[];
 }
 
+/**
+ * Subject colour for a section, resolved to the --sec-* tokens in globals.css.
+ * Twenty sections sharing one brand gold gave the panel nothing to navigate
+ * by; a hue per subject makes it scannable — and the grouping is meaningful,
+ * not decorative (everything green is cover, everything teal is a per-tree
+ * metric, blue is water).
+ */
+type SectionAccent =
+  | "forest"
+  | "canopy"
+  | "change"
+  | "land"
+  | "imagery"
+  | "water"
+  | "infra"
+  | "fauna"
+  | "carbon";
+
+// Written out as whole class strings because Tailwind scans for literals —
+// a template built from the accent name at runtime would generate nothing.
+const ACCENT_STYLES: Record<
+  SectionAccent,
+  { chip: string; idle: string; header: string; edge: string }
+> = {
+  forest: {
+    chip: "bg-sec-forest/14 text-sec-forest ring-sec-forest/30",
+    idle: "from-sec-forest/8 to-sec-forest/2",
+    header: "from-sec-forest/24 to-sec-forest/7",
+    edge: "border-sec-forest/45 ring-sec-forest/20",
+  },
+  canopy: {
+    chip: "bg-sec-canopy/14 text-sec-canopy ring-sec-canopy/30",
+    idle: "from-sec-canopy/8 to-sec-canopy/2",
+    header: "from-sec-canopy/24 to-sec-canopy/7",
+    edge: "border-sec-canopy/45 ring-sec-canopy/20",
+  },
+  change: {
+    chip: "bg-sec-change/14 text-sec-change ring-sec-change/30",
+    idle: "from-sec-change/8 to-sec-change/2",
+    header: "from-sec-change/24 to-sec-change/7",
+    edge: "border-sec-change/45 ring-sec-change/20",
+  },
+  land: {
+    chip: "bg-sec-land/14 text-sec-land ring-sec-land/30",
+    idle: "from-sec-land/8 to-sec-land/2",
+    header: "from-sec-land/24 to-sec-land/7",
+    edge: "border-sec-land/45 ring-sec-land/20",
+  },
+  imagery: {
+    chip: "bg-sec-imagery/14 text-sec-imagery ring-sec-imagery/30",
+    idle: "from-sec-imagery/8 to-sec-imagery/2",
+    header: "from-sec-imagery/24 to-sec-imagery/7",
+    edge: "border-sec-imagery/45 ring-sec-imagery/20",
+  },
+  water: {
+    chip: "bg-sec-water/14 text-sec-water ring-sec-water/30",
+    idle: "from-sec-water/8 to-sec-water/2",
+    header: "from-sec-water/24 to-sec-water/7",
+    edge: "border-sec-water/45 ring-sec-water/20",
+  },
+  infra: {
+    chip: "bg-sec-infra/14 text-sec-infra ring-sec-infra/30",
+    idle: "from-sec-infra/8 to-sec-infra/2",
+    header: "from-sec-infra/24 to-sec-infra/7",
+    edge: "border-sec-infra/45 ring-sec-infra/20",
+  },
+  fauna: {
+    chip: "bg-sec-fauna/14 text-sec-fauna ring-sec-fauna/30",
+    idle: "from-sec-fauna/8 to-sec-fauna/2",
+    header: "from-sec-fauna/24 to-sec-fauna/7",
+    edge: "border-sec-fauna/45 ring-sec-fauna/20",
+  },
+  carbon: {
+    chip: "bg-sec-carbon/14 text-sec-carbon ring-sec-carbon/30",
+    idle: "from-sec-carbon/8 to-sec-carbon/2",
+    header: "from-sec-carbon/24 to-sec-carbon/7",
+    edge: "border-sec-carbon/45 ring-sec-carbon/20",
+  },
+};
+
 interface SectionDef {
   label: string;
   /** Shown beside the section label in its box header. */
   icon: LucideIcon;
+  /** Subject colour — see SectionAccent. */
+  accent: SectionAccent;
   /**
    * layer  — the section *is* one layer: a header switch only, plus a year
    *          dropdown when that layer has multiple years.
@@ -87,23 +171,24 @@ interface SectionDef {
 // below are the genuine groupings, where several thin geometries are meant to
 // be drawn together.
 export const SECTIONS: SectionDef[] = [
-  { label: "Forest Cover", icon: Trees, mode: "layer", layerId: "forest-cover" },
-  { label: "Forest Type", icon: Trees, mode: "layer", layerId: "forest-type" },
-  { label: "Green Cover", icon: Leaf, mode: "layer", layerId: "green-cover" },
-  { label: "Vegetation Change", icon: Sprout, mode: "layer", layerId: "vegetation-change" },
-  { label: "Forest Fragmentation", icon: Puzzle, mode: "layer", layerId: "fragmentation" },
-  { label: "Land Use Land Cover (LULC)", icon: Map, mode: "layer", layerId: "lulc" },
-  { label: "Forest Status", icon: Activity, mode: "layer", layerId: "forest-boundary" },
-  { label: "Cadastral Map", icon: LandPlot, mode: "layer", layerId: "survey-number" },
-  { label: "Tree Count", icon: Hash, mode: "layer", layerId: "tree-count" },
-  { label: "Tree Species Classification", icon: Tags, mode: "layer", layerId: "tree-species" },
-  { label: "Tree Height Classification", icon: Ruler, mode: "layer", layerId: "tree-height" },
-  { label: "Ecological Degradation", icon: TrendingDown, mode: "layer", layerId: "ecological-degradation" },
-  { label: "Trees Outside Forest", icon: TreePine, mode: "layer", layerId: "tof" },
-  { label: "Growing Stock", icon: Boxes, mode: "layer", layerId: "growing-stock" },
-  { label: "False Colour Composite", icon: Image, mode: "layer", layerId: "fcc" },
+  { label: "Forest Cover", icon: Trees, accent: "forest", mode: "layer", layerId: "forest-cover" },
+  { label: "Forest Type", icon: Trees, accent: "forest", mode: "layer", layerId: "forest-type" },
+  { label: "Green Cover", icon: Leaf, accent: "forest", mode: "layer", layerId: "green-cover" },
+  { label: "Vegetation Change", icon: Sprout, accent: "change", mode: "layer", layerId: "vegetation-change" },
+  { label: "Forest Fragmentation", icon: Puzzle, accent: "change", mode: "layer", layerId: "fragmentation" },
+  { label: "Land Use Land Cover (LULC)", icon: Map, accent: "land", mode: "layer", layerId: "lulc" },
+  { label: "Forest Status", icon: Activity, accent: "forest", mode: "layer", layerId: "forest-boundary" },
+  { label: "Cadastral Map", icon: LandPlot, accent: "land", mode: "layer", layerId: "survey-number" },
+  { label: "Tree Count", icon: Hash, accent: "canopy", mode: "layer", layerId: "tree-count" },
+  { label: "Tree Species Classification", icon: Tags, accent: "canopy", mode: "layer", layerId: "tree-species" },
+  { label: "Tree Height Classification", icon: Ruler, accent: "canopy", mode: "layer", layerId: "tree-height" },
+  { label: "Ecological Degradation", icon: TrendingDown, accent: "change", mode: "layer", layerId: "ecological-degradation" },
+  { label: "Trees Outside Forest", icon: TreePine, accent: "forest", mode: "layer", layerId: "tof" },
+  { label: "Growing Stock", icon: Boxes, accent: "canopy", mode: "layer", layerId: "growing-stock" },
+  { label: "False Colour Composite", icon: Image, accent: "imagery", mode: "layer", layerId: "fcc" },
   {
     label: "Watershed Analysis",
+    accent: "water",
     icon: Droplets,
     mode: "multi",
     items: [
@@ -119,6 +204,7 @@ export const SECTIONS: SectionDef[] = [
   },
   {
     label: "Base Layers",
+    accent: "infra",
     icon: Layers,
     mode: "multi",
     items: [
@@ -140,6 +226,7 @@ export const SECTIONS: SectionDef[] = [
   },
   {
     label: "Wildlife Corridor",
+    accent: "fauna",
     icon: PawPrint,
     mode: "multi",
     items: [
@@ -156,6 +243,7 @@ export const SECTIONS: SectionDef[] = [
   },
   {
     label: "Carbon Stock",
+    accent: "carbon",
     icon: PieChart,
     mode: "multi",
     items: [
@@ -188,47 +276,84 @@ function SidebarItemRow({
 }) {
   return (
     <div
-      className={`group flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-foreground/80 hover:bg-muted hover:text-primary ${className ?? ""}`}
+      className={cn(
+        "group flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm text-foreground/80 transition-colors hover:bg-primary/10 hover:text-primary",
+        className,
+      )}
     >
-      <Icon className="size-4 text-muted-foreground group-hover:text-primary" strokeWidth={1.75} />
+      <Icon className="size-4 text-muted-foreground transition-colors group-hover:text-primary" strokeWidth={1.75} />
       {label}
     </div>
   );
 }
 
-// Each section is a bordered box with a tinted header strip, so a column of
+// Each section is a raised box with a tinted header strip, so a column of
 // twenty of them still reads as twenty discrete groups rather than one long
 // undifferentiated run of rows. `children` is what sits inside the box below
 // the header — a section that is a bare switch (a pending theme, or a
 // single-snapshot one) has none, and then the box is only its header.
+//
+// The icon chip always carries the section's subject colour, which is what
+// makes a column of twenty boxes scannable at a glance. `active` then layers
+// the same hue over the whole box — washed header, tinted border and ring,
+// and a lift off the page — so with only one section open at a time the open
+// one is unmistakable. Before this it was near identical to the closed ones.
 function SidebarSectionBox({
   label,
   icon: Icon,
+  accent,
+  active,
   right,
   tourTarget,
   children,
 }: {
   label: string;
   icon: LucideIcon;
+  accent: SectionAccent;
+  active: boolean;
   right?: React.ReactNode;
   tourTarget?: string;
   children?: React.ReactNode;
 }) {
   const hasBody = Boolean(children);
+  const style = ACCENT_STYLES[accent];
 
   return (
     <section
       data-tour={tourTarget}
-      className="overflow-hidden rounded-lg border border-sidebar-border bg-sidebar"
+      className={cn(
+        "overflow-hidden rounded-xl border bg-card transition-all duration-200",
+        active
+          ? cn("shadow-e3 ring-1", style.edge)
+          : "border-border/70 shadow-e2 hover:border-border hover:shadow-e3",
+      )}
     >
       <header
-        className={`flex items-center justify-between gap-2 bg-muted/70 px-2.5 py-2 ${
-          hasBody ? "border-b border-sidebar-border" : ""
-        }`}
+        className={cn(
+          "flex items-center justify-between gap-2 px-2.5 py-2 transition-colors",
+          // Both states wash the header in the section's own hue; the open
+          // one just does it three times as strongly, which — with the ring
+          // and the extra lift — is what still sets it apart.
+          "bg-linear-to-b",
+          active ? style.header : style.idle,
+          hasBody && (active ? "border-b border-border/60" : "border-b border-border/50"),
+        )}
       >
         <span className="flex min-w-0 items-center gap-2">
-          <Icon className="size-3.5 shrink-0 text-muted-foreground" strokeWidth={2} />
-          <p className="truncate text-[11px] font-semibold tracking-wider text-muted-foreground uppercase">
+          <span
+            className={cn(
+              "flex size-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors",
+              style.chip,
+            )}
+          >
+            <Icon className="size-3" strokeWidth={2.25} />
+          </span>
+          <p
+            className={cn(
+              "truncate text-[11px] font-semibold tracking-wider uppercase transition-colors",
+              active ? "text-foreground" : "text-muted-foreground",
+            )}
+          >
             {label}
           </p>
         </span>
@@ -242,6 +367,7 @@ function SidebarSectionBox({
 function ToggleItemRow({
   label,
   icon: Icon,
+  color,
   enabled,
   pending,
   checked,
@@ -249,6 +375,12 @@ function ToggleItemRow({
 }: {
   label: string;
   icon?: LucideIcon;
+  /**
+   * The colour this layer actually renders in on the map, so the row is a
+   * key as well as a switch — the same trick the client's own reference
+   * sidebar uses. Absent for pending rows, which draw nothing to key.
+   */
+  color?: string;
   enabled: boolean;
   pending: boolean;
   checked: boolean;
@@ -266,21 +398,34 @@ function ToggleItemRow({
           onActivate();
         }
       }}
-      className={`group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors ${
-        enabled
-          ? "cursor-pointer text-foreground/80 hover:bg-muted hover:text-primary"
-          : "cursor-not-allowed text-muted-foreground/60"
-      }`}
+      className={cn(
+        "group flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-sm transition-colors",
+        !enabled && "cursor-not-allowed text-muted-foreground/60",
+        // A checked row keeps the tint whether or not the pointer is on it,
+        // so you can read off what is drawn without hunting for lit switches.
+        enabled && checked && "cursor-pointer bg-primary/12 font-medium text-foreground",
+        enabled && !checked && "cursor-pointer text-foreground/80 hover:bg-primary/8 hover:text-primary",
+      )}
     >
       {Icon && (
         <Icon
-          className={`size-4 ${enabled ? "text-muted-foreground group-hover:text-primary" : "text-muted-foreground/60"}`}
+          className={cn(
+            "size-4 transition-colors",
+            !enabled && "text-muted-foreground/60",
+            // Without a colour of its own the icon falls back to the old
+            // grey-to-gold hover.
+            enabled && !color && (checked ? "text-primary" : "text-muted-foreground group-hover:text-primary"),
+          )}
+          style={enabled && color ? { color } : undefined}
           strokeWidth={1.75}
         />
       )}
       <span className="flex-1">{label}</span>
       {pending ? (
-        <Badge variant="outline" className="text-[10px] text-muted-foreground">
+        <Badge
+          variant="outline"
+          className="border-border/70 bg-muted/70 text-[10px] font-medium text-muted-foreground"
+        >
           Pending
         </Badge>
       ) : (
@@ -356,7 +501,20 @@ export function SidebarSections({
   onDisabledClick: (section: string) => void;
 }) {
   return (
-    <div data-tour="sections" className="flex flex-col gap-2 p-3">
+    <div data-tour="sections" className="flex flex-col">
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b border-border/50 bg-panel/85 px-4 py-2.5 backdrop-blur-sm">
+        <Layers className="size-3.5 shrink-0 text-primary" strokeWidth={2.25} />
+        <p className="text-[11px] font-semibold tracking-[0.14em] text-foreground/70 uppercase">
+          Map Layers
+        </p>
+        {activeSection && (
+          <span className="ml-auto min-w-0 truncate rounded-full bg-primary/15 px-2 py-0.5 text-[10px] font-medium text-primary ring-1 ring-primary/25">
+            {activeSection}
+          </span>
+        )}
+      </div>
+
+      <div className="flex flex-col gap-2 p-3">
       {SECTIONS.map((section, i) => {
         const on = activeSection === section.label;
         const sectionEntry = section.layerId ? registryEntry(section.layerId) : undefined;
@@ -402,6 +560,7 @@ export function SidebarSections({
                 <ToggleItemRow
                   label={item.label}
                   icon={item.icon}
+                  color={entry && !pending ? colorForLayer(entry) : undefined}
                   enabled={on && !pending}
                   pending={pending}
                   checked={checked}
@@ -448,12 +607,17 @@ export function SidebarSections({
             key={section.label}
             label={section.label}
             icon={section.icon}
+            accent={section.accent}
+            active={on}
             // The walkthrough points at the first section as its example of
             // "switch a section on"; the rest need no target of their own.
             tourTarget={i === 0 ? "section-theme" : undefined}
             right={
               sectionPending ? (
-                <Badge variant="outline" className="shrink-0 text-[10px] text-muted-foreground">
+                <Badge
+                  variant="outline"
+                  className="shrink-0 border-border/70 bg-muted/70 text-[10px] font-medium text-muted-foreground"
+                >
                   Pending
                 </Badge>
               ) : (
@@ -470,6 +634,7 @@ export function SidebarSections({
           </SidebarSectionBox>
         );
       })}
+      </div>
     </div>
   );
 }
