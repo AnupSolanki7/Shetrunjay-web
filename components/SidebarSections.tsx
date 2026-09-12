@@ -82,61 +82,88 @@ type SectionAccent =
 // a template built from the accent name at runtime would generate nothing.
 const ACCENT_STYLES: Record<
   SectionAccent,
-  { chip: string; idle: string; header: string; edge: string }
+  {
+    chip: string;
+    idle: string;
+    header: string;
+    edge: string;
+    /** Closed-state border — the section's own hue, not neutral grey. */
+    idleEdge: string;
+    /** Hairline under the header, in the section's hue. */
+    rule: string;
+  }
 > = {
   forest: {
     chip: "bg-sec-forest/14 text-sec-forest ring-sec-forest/30",
     idle: "from-sec-forest/8 to-sec-forest/2",
     header: "from-sec-forest/24 to-sec-forest/7",
-    edge: "border-sec-forest/45 ring-sec-forest/20",
+    edge: "border-sec-forest/75 ring-sec-forest/25",
+    idleEdge: "border-sec-forest/45 hover:border-sec-forest/70",
+    rule: "border-sec-forest/25",
   },
   canopy: {
     chip: "bg-sec-canopy/14 text-sec-canopy ring-sec-canopy/30",
     idle: "from-sec-canopy/8 to-sec-canopy/2",
     header: "from-sec-canopy/24 to-sec-canopy/7",
-    edge: "border-sec-canopy/45 ring-sec-canopy/20",
+    edge: "border-sec-canopy/75 ring-sec-canopy/25",
+    idleEdge: "border-sec-canopy/45 hover:border-sec-canopy/70",
+    rule: "border-sec-canopy/25",
   },
   change: {
     chip: "bg-sec-change/14 text-sec-change ring-sec-change/30",
     idle: "from-sec-change/8 to-sec-change/2",
     header: "from-sec-change/24 to-sec-change/7",
-    edge: "border-sec-change/45 ring-sec-change/20",
+    edge: "border-sec-change/75 ring-sec-change/25",
+    idleEdge: "border-sec-change/45 hover:border-sec-change/70",
+    rule: "border-sec-change/25",
   },
   land: {
     chip: "bg-sec-land/14 text-sec-land ring-sec-land/30",
     idle: "from-sec-land/8 to-sec-land/2",
     header: "from-sec-land/24 to-sec-land/7",
-    edge: "border-sec-land/45 ring-sec-land/20",
+    edge: "border-sec-land/75 ring-sec-land/25",
+    idleEdge: "border-sec-land/45 hover:border-sec-land/70",
+    rule: "border-sec-land/25",
   },
   imagery: {
     chip: "bg-sec-imagery/14 text-sec-imagery ring-sec-imagery/30",
     idle: "from-sec-imagery/8 to-sec-imagery/2",
     header: "from-sec-imagery/24 to-sec-imagery/7",
-    edge: "border-sec-imagery/45 ring-sec-imagery/20",
+    edge: "border-sec-imagery/75 ring-sec-imagery/25",
+    idleEdge: "border-sec-imagery/45 hover:border-sec-imagery/70",
+    rule: "border-sec-imagery/25",
   },
   water: {
     chip: "bg-sec-water/14 text-sec-water ring-sec-water/30",
     idle: "from-sec-water/8 to-sec-water/2",
     header: "from-sec-water/24 to-sec-water/7",
-    edge: "border-sec-water/45 ring-sec-water/20",
+    edge: "border-sec-water/75 ring-sec-water/25",
+    idleEdge: "border-sec-water/45 hover:border-sec-water/70",
+    rule: "border-sec-water/25",
   },
   infra: {
     chip: "bg-sec-infra/14 text-sec-infra ring-sec-infra/30",
     idle: "from-sec-infra/8 to-sec-infra/2",
     header: "from-sec-infra/24 to-sec-infra/7",
-    edge: "border-sec-infra/45 ring-sec-infra/20",
+    edge: "border-sec-infra/75 ring-sec-infra/25",
+    idleEdge: "border-sec-infra/45 hover:border-sec-infra/70",
+    rule: "border-sec-infra/25",
   },
   fauna: {
     chip: "bg-sec-fauna/14 text-sec-fauna ring-sec-fauna/30",
     idle: "from-sec-fauna/8 to-sec-fauna/2",
     header: "from-sec-fauna/24 to-sec-fauna/7",
-    edge: "border-sec-fauna/45 ring-sec-fauna/20",
+    edge: "border-sec-fauna/75 ring-sec-fauna/25",
+    idleEdge: "border-sec-fauna/45 hover:border-sec-fauna/70",
+    rule: "border-sec-fauna/25",
   },
   carbon: {
     chip: "bg-sec-carbon/14 text-sec-carbon ring-sec-carbon/30",
     idle: "from-sec-carbon/8 to-sec-carbon/2",
     header: "from-sec-carbon/24 to-sec-carbon/7",
-    edge: "border-sec-carbon/45 ring-sec-carbon/20",
+    edge: "border-sec-carbon/75 ring-sec-carbon/25",
+    idleEdge: "border-sec-carbon/45 hover:border-sec-carbon/70",
+    rule: "border-sec-carbon/25",
   },
 };
 
@@ -293,11 +320,12 @@ function SidebarItemRow({
 // the header — a section that is a bare switch (a pending theme, or a
 // single-snapshot one) has none, and then the box is only its header.
 //
-// The icon chip always carries the section's subject colour, which is what
-// makes a column of twenty boxes scannable at a glance. `active` then layers
-// the same hue over the whole box — washed header, tinted border and ring,
-// and a lift off the page — so with only one section open at a time the open
-// one is unmistakable. Before this it was near identical to the closed ones.
+// The icon chip and the box's own border always carry the section's subject
+// colour, which is what makes a column of twenty boxes scannable at a glance.
+// The border is tinted all the way round rather than left neutral grey, so a
+// closed card already declares what it is; `active` then turns everything up
+// — a near-solid border, a washed header, a ring and a lift off the page — so
+// with only one section open at a time the open one is unmistakable.
 function SidebarSectionBox({
   label,
   icon: Icon,
@@ -325,7 +353,7 @@ function SidebarSectionBox({
         "overflow-hidden rounded-xl border bg-card transition-all duration-200",
         active
           ? cn("shadow-e3 ring-1", style.edge)
-          : "border-border/70 shadow-e2 hover:border-border hover:shadow-e3",
+          : cn("shadow-e2 hover:-translate-y-px hover:shadow-e3", style.idleEdge),
       )}
     >
       <header
@@ -336,13 +364,15 @@ function SidebarSectionBox({
           // and the extra lift — is what still sets it apart.
           "bg-linear-to-b",
           active ? style.header : style.idle,
-          hasBody && (active ? "border-b border-border/60" : "border-b border-border/50"),
+          // Tinted rather than grey, so the header reads as part of the same
+          // coloured block as the border and the chip.
+          hasBody && cn("border-b", active ? style.rule : "border-border/50"),
         )}
       >
         <span className="flex min-w-0 items-center gap-2">
           <span
             className={cn(
-              "flex size-5 shrink-0 items-center justify-center rounded-md ring-1 transition-colors",
+              "flex size-5 shrink-0 items-center justify-center rounded-md ring-1 shadow-e1 transition-colors",
               style.chip,
             )}
           >
@@ -514,7 +544,7 @@ export function SidebarSections({
         )}
       </div>
 
-      <div className="flex flex-col gap-2 p-3">
+      <div className="flex flex-col gap-2.5 p-3">
       {SECTIONS.map((section, i) => {
         const on = activeSection === section.label;
         const sectionEntry = section.layerId ? registryEntry(section.layerId) : undefined;

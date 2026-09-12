@@ -50,13 +50,12 @@ export function Header({
   search?: React.ReactNode;
 }) {
   return (
-    <header className="relative z-30 flex items-center gap-2 border-b border-border bg-linear-to-b from-card to-panel/70 p-3 shadow-e1 xl:gap-0 xl:py-3 xl:pr-3 xl:pl-0">
-      {/* Brand rule along the bottom edge — the one deliberate flash of gold
-          in the chrome, fading out to the right so it frames rather than
-          underlines. */}
+    <header className="relative z-30 flex items-center gap-2 border-b border-border bg-linear-to-r from-nav-deep via-nav to-nav-deep p-3 shadow-e2 xl:gap-0 xl:py-2.5 xl:pr-3 xl:pl-0">
+      {/* Rule along the bottom edge, fading out to the right so it frames the
+          band rather than underlining it. */}
       <span
         aria-hidden
-        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-linear-to-r from-primary/70 via-primary/25 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 bg-linear-to-r from-nav-accent/55 via-nav-accent/20 to-transparent"
       />
 
       <Button
@@ -73,13 +72,13 @@ export function Header({
           MapDashboard), so whatever follows it in the bar lines up with the
           map column that starts below it. Keep the two widths in step. */}
       <div className="flex min-w-0 shrink-0 items-center gap-2 xl:w-[18%] xl:px-4">
-        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-primary/30 to-primary/10 shadow-e1 ring-1 ring-primary/30">
-          <Mountain className="size-5 text-primary" strokeWidth={2} />
+        <span className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-linear-to-br from-nav-soft to-nav-line/40 shadow-e1 ring-1 ring-nav-line">
+          <Mountain className="size-5 text-nav-accent" strokeWidth={2.25} />
         </span>
         {/* Dropped below sm so the search bar has room on a phone; the mobile
             navigation sheet carries the wordmark in full. */}
         <div className="hidden min-w-0 sm:block">
-          <p className="truncate text-sm font-semibold tracking-tight leading-tight">
+          <p className="truncate text-sm font-semibold tracking-tight text-foreground leading-tight">
             Shetrunjay Hills
           </p>
           <p className="truncate text-[11px] tracking-wide leading-tight text-muted-foreground">
@@ -90,7 +89,7 @@ export function Header({
 
       {search && (
         <div className="min-w-0 flex-1 xl:pl-4">
-          <div className="w-full max-w-sm">{search}</div>
+          <div className="w-full max-w-md">{search}</div>
         </div>
       )}
 
@@ -102,11 +101,11 @@ export function Header({
           <Button
             variant="ghost"
             size="icon"
-            className="rounded-full border border-border/70 bg-card text-muted-foreground shadow-e1 hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
+            className="rounded-full border border-nav-line bg-nav-soft text-nav-accent shadow-e1 transition-[color,background-color,border-color,box-shadow] hover:border-nav-accent/50 hover:bg-nav-line/50 hover:text-foreground hover:ring-[3px] hover:ring-nav-accent/15 focus-visible:ring-[3px] focus-visible:ring-nav-accent/25"
             aria-label="Replay dashboard walkthrough"
             onClick={onHelpClick}
           >
-            <CircleQuestionMark />
+            <CircleQuestionMark strokeWidth={2.25} />
           </Button>
         )}
 

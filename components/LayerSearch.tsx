@@ -164,10 +164,14 @@ export function LayerSearch({
 
   return (
     <div ref={rootRef} className={cn("relative", className)} data-tour="search">
-      <div className="group/search flex h-9 items-center gap-2 rounded-full border border-border/70 bg-card px-3 shadow-e1 transition-[color,box-shadow,background-color] hover:border-border focus-within:border-primary/50 focus-within:bg-card focus-within:ring-[3px] focus-within:ring-primary/20">
+      {/* Deliberately the loudest control in the header bar. A white pill on a
+          white band would disappear, so it reads as recessed instead of
+          raised: a grey inset well against the flat band — a field that looks
+          like a field, without borrowing the brand accent to say so. */}
+      <div className="group/search flex h-10 items-center gap-2.5 rounded-full border border-nav-line bg-nav-soft px-3.5 shadow-[inset_0_1px_2px_oklch(0.30_0.01_96_/_0.07)] transition-[color,box-shadow,background-color,border-color] hover:border-nav-accent/45 focus-within:border-nav-accent/60 focus-within:bg-card focus-within:ring-[3px] focus-within:ring-nav-accent/20">
         <Search
-          className="size-4 shrink-0 text-muted-foreground transition-colors group-focus-within/search:text-primary"
-          strokeWidth={2}
+          className="size-4 shrink-0 text-nav-accent transition-colors group-focus-within/search:text-foreground"
+          strokeWidth={2.25}
         />
         <input
           ref={inputRef}
@@ -206,7 +210,7 @@ export function LayerSearch({
         <div
           id="layer-search-results"
           role="listbox"
-          className="absolute top-full left-0 z-50 mt-1.5 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-e3 scrollbar-thin"
+          className="absolute top-full left-0 z-50 mt-2 max-h-72 w-full overflow-y-auto rounded-xl border border-border bg-popover shadow-e3 ring-1 ring-black/5 scrollbar-thin"
         >
           {results.length === 0 ? (
             <p className="px-3 py-3 text-xs text-muted-foreground">
@@ -226,7 +230,7 @@ export function LayerSearch({
                   onClick={() => choose(result)}
                   className={cn(
                     "flex w-full items-center gap-2 px-3 py-2 text-left transition-colors",
-                    i === activeIndex && "bg-primary/10",
+                    i === activeIndex && "bg-nav-soft",
                     result.pending && "cursor-not-allowed opacity-60",
                   )}
                 >
@@ -242,7 +246,7 @@ export function LayerSearch({
                     </Badge>
                   ) : (
                     on && (
-                      <Badge className="shrink-0 bg-accent text-[10px] text-accent-foreground">
+                      <Badge className="shrink-0 bg-foreground text-[10px] text-background">
                         On
                       </Badge>
                     )
